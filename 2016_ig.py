@@ -12,11 +12,28 @@ def main():
 				'Interest\nPayment\nFrequency', 'Cpn\nType', 'Marketplace']
 
 	df = pd.read_csv(path + filename, index_col='Issue\nDate', usecols=use_cols,
-					parse_dates=True, na_values=['nan'])
+					parse_dates=True, infer_datetime_format=True, na_values=['nan'])
 
-	print df.head()
+	Group_Monthly(df)
 
-#def 
+def Group_Monthly(df):
+	""" 
+		Group data into subsections of month and nation. 
+		Create a dataframe of the subsections with the month, nation, and number of 
+		entries in a subsection as the 'count' column.
+		Sort by decreasing 'count'.
+
+	"""
+	grouped = df.groupby([pd.TimeGrouper(freq='M'), 'Nation'])
+	df_mth_nat_ct = pd.DataFrame(
+						data=np.array(
+							[[name[0], name[1], group.shape[0]] for name,group in grouped]
+						),
+						columns=['date', 'nation', 'count']).set_index('date')
+
+	df_mth_nat_ct.sort(columns=['count', 'nation'], ascending=False, inplace=True)
+
+	print df_mth_nat_ct
 
 if __name__ == '__main__':
 	main()
