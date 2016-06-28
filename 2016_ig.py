@@ -6,13 +6,13 @@ def main():
 	path = 'C:\Users\Alex\Desktop\\'	# modify to own path for running
 	filename = 'csv IG issuance since Jan 2016.csv'
 
-	df = pd.read_csv(path + filename, index_col='Issue\nDate', 
+	use_cols = ['Maturity\n(mm/dd/yyyy)', 'Issuer', 'Nation', 
+				'Primary\nExchange\nWhere\nIssuer\'s\nStock\nTrades', 'Coupon\n (%)', 
+				'Offer\nYield\nto Maturity\n (%)', 'Stan-\ndard\n &\nPoor\'s\nRating', 
+				'Interest\nPayment\nFrequency', 'Cpn\nType', 'Marketplace']
+
+	df = pd.read_csv(path + filename, index_col='Issue\nDate', usecols=use_cols,
 					parse_dates=True, na_values=['nan'])
-	df.drop('Maturity', axis=1, inplace=True)	# duplicate of 'Maturity\n(mm/dd/yyyy)' col
-	# add usecols=['Date', 'Adj Close'] paramter to select column subset
-
-	print df.head()
-
 
 if __name__ == '__main__':
 	main()
