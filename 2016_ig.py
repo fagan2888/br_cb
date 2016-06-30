@@ -8,6 +8,7 @@ def main():
 	filename = 'csv IG issuance since Jan 2016.csv'
 	filename2 = 'domicile_dictionary.csv'
 	filename3 = 'Euro_countries_list.csv'
+	filename4 = 'non convertible bonds issuance since Jan 2016.csv'
 
 	test_filename = 'test'
 
@@ -17,16 +18,27 @@ def main():
 				'Interest\nPayment\nFrequency', 'Cpn\nType', 'Marketplace', 'Market\nArea',
 				'Domicile\nNation\nCode']
 
-	df = pd.read_csv(path + filename, index_col='Issue\nDate', #usecols=use_cols,
-					parse_dates=True, infer_datetime_format=True, na_values=['nan'])
+	df = pd.read_csv(path + filename4, index_col='Issue\nDate', #usecols=use_cols,
+					parse_dates=True, infer_datetime_format=True, na_values=np.nan)
 
 	df_domicile = pd.read_csv(data_path + filename2)
 	df_euro_list = pd.read_csv(data_path + filename3)
+
+	df = Convert_Column_Types(df)
 
 	dom_name_np = Convert_Dom_Codes(df, df_domicile)
 	df['Domicile'] = dom_name_np
 
 	cb_arr = Compare_Dom_Mktplc(df, df_euro_list)
+
+def Convert_Column_Types(df):
+	for y in df.columns:
+		if(df[y].dtype == np.float64 or df[y].dtype == np.int64):
+			df[y] = df[y].astype(float, copy=False)
+		else:
+			df[y] = df[y].astype(str, copy=False)
+
+	return df
 
 def Convert_Dom_Codes(df, df_domicile):
 	"""
@@ -41,14 +53,18 @@ def Convert_Dom_Codes(df, df_domicile):
 	dom_name_arr = []
 	miss_code = []
 	for code in dom_code_arr:
-		try:
-			dom_name_arr.append(dict_domicile[code])
-		except:
-			miss_code.append(code)
-			pass
+		# append nan values to keep same size as original df
+		if code == 'nan':
+			dom_name_arr.append('nan')
+		else:
+			try:
+				dom_name_arr.append(dict_domicile[code])
+			except:
+				miss_code.append(code)
+				pass
 
 	# Make sure no missed country codes
-	assert len(miss_code) == 0
+	assert (len(miss_code) == 0), np.unique(miss_code)
 
 	dom_name_np = np.array(dom_name_arr)
 
@@ -65,13 +81,19 @@ def Compare_Dom_Mktplc(df, df_euro):
 	for index, row in df.iterrows():
 		# if domicile and marketplace don't match
 		# if they don't match, then if country is part of EU and marketplace isn't EU
+		# if they are nan, don't consider them
 		if 	row["Domicile"] not in row["Marketplace"] and \
 			(row['Domicile'] in df_euro['Country'].values and \
-		   	'Euro' not in row['Marketplace'] and 'EURO' not in row['Marketplace']):
-
+		   	'Euro' not in row['Marketplace'] and 'EURO' not in row['Marketplace']) and \
+		   	row['Domicile'] != 'nan':
+		   	#print row['Domicile'], row['Marketplace']
 			cb_arr.append(row)
 
 	return cb_arr
+
+def Compare_Dom_Curr(df):
+	pass
+
 
 def Group_Monthly(df):
 	""" 
