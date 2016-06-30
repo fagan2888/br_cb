@@ -16,7 +16,7 @@ def main():
 				'Primary\nExchange\nWhere\nIssuer\'s\nStock\nTrades', 'Coupon\n (%)', 
 				'Offer\nYield\nto Maturity\n (%)', 'Stan-\ndard\n &\nPoor\'s\nRating', 
 				'Interest\nPayment\nFrequency', 'Cpn\nType', 'Marketplace', 'Market\nArea',
-				'Domicile\nNation\nCode']
+				'Domicile\nNation\nCode', 'Foreign Issue Flag\n(eg Yankee)\n(Y/N)']
 
 	df = pd.read_csv(path + filename4, index_col='Issue\nDate', #usecols=use_cols,
 					parse_dates=True, infer_datetime_format=True, na_values=np.nan)
@@ -29,7 +29,12 @@ def main():
 	dom_name_np = Convert_Dom_Codes(df, df_domicile)
 	df['Domicile'] = dom_name_np
 
-	cb_arr = Compare_Dom_Mktplc(df, df_euro_list)
+	df_cb = Compare_Dom_Mktplc(df, df_euro_list)
+
+	Flag_vs_Grouping(df, df_cb)
+
+def Foreign_Issue(df):
+	df_for = df['Foreign Issue Flag\n(eg Yankee)\n(Y/N)']
 
 def Convert_Column_Types(df):
 	for y in df.columns:
@@ -89,11 +94,16 @@ def Compare_Dom_Mktplc(df, df_euro):
 		   	#print row['Domicile'], row['Marketplace']
 			cb_arr.append(row)
 
-	return cb_arr
+	return pd.DataFrame(cb_arr)
 
-def Compare_Dom_Curr(df):
-	pass
+def Flag_vs_Grouping(df_orig, df_cb):
+	df_for = df_orig[df_orig['Foreign Issue Flag\n(eg Yankee)\n(Y/N)'] == 'Yes']
 
+	print 'Number of foreign flagged bonds: ', df_for.shape[0]
+	print 'Number of cross-border bonds found: ', df_cb.shape[0]
+	print 'Number of cross-border bonds without foreign flag: ', \
+			df_cb[df_cb['Foreign Issue Flag\n(eg Yankee)\n(Y/N)'] != 'Yes'].shape[0]
+	
 
 def Group_Monthly(df):
 	""" 
