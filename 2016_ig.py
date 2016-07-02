@@ -10,13 +10,12 @@ def main():
 	filename3 = 'Euro_countries_list.csv'
 	filename4 = 'non convertible bonds issuance since Jan 2016.csv'
 
-	test_filename = 'test'
-
 	use_cols = ['Maturity\n(mm/dd/yyyy)', 'Issuer', 'Nation', 'Issue\nDate',
 				'Primary\nExchange\nWhere\nIssuer\'s\nStock\nTrades', 'Coupon\n (%)', 
 				'Offer\nYield\nto Maturity\n (%)', 'Stan-\ndard\n &\nPoor\'s\nRating', 
 				'Interest\nPayment\nFrequency', 'Cpn\nType', 'Marketplace', 'Market\nArea',
-				'Domicile\nNation\nCode', 'Foreign Issue Flag\n(eg Yankee)\n(Y/N)']
+				'Domicile\nNation\nCode', 'Foreign Issue Flag\n(eg Yankee)\n(Y/N)', 
+				'Denominations\nCurrency']
 
 	df = pd.read_csv(path + filename4, index_col='Issue\nDate', #usecols=use_cols,
 					parse_dates=True, infer_datetime_format=True, na_values=np.nan)
@@ -29,7 +28,8 @@ def main():
 	dom_name_np = Convert_Dom_Codes(df, df_domicile)
 	df['Domicile'] = dom_name_np
 
-	df_cb = Compare_Dom_Mktplc(df, df_euro_list)
+	#df_cb = Compare_Dom_Mktplc(df, df_euro_list)
+	df_cb = Compare_Nation_Mktplc(df, df_euro_list)
 
 	Flag_vs_Grouping(df, df_cb)
 
@@ -96,6 +96,30 @@ def Compare_Dom_Mktplc(df, df_euro):
 
 	return pd.DataFrame(cb_arr)
 
+def Compare_Nation_Mktplc(df, df_euro):
+	"""
+		Compare country of domicile and marketplace. If they are different then add bond to 
+		cb_arr. Speical case if bond is part of European Union, then check if the marketplace 
+		isn't the EURO. 
+	"""
+	df['Nation'] = np.where(df['Nation'] == 'United States', 'U.S.', df['Nation'])
+
+	cb_arr = []	#cross_border array
+
+	for index, row in df.iterrows():
+		# if domicile and marketplace don't match
+		# if they don't match, then if country is part of EU and marketplace isn't EU
+		# if they are nan, don't consider them
+		if 	row["Nation"] not in row["Marketplace"] and \
+			(row['Nation'] in df_euro['Country'].values and \
+		   	'Euro' not in row['Marketplace'] and 'EURO' not in row['Marketplace']) and \
+		   	row['Nation'] != 'nan':
+
+	 		#print index, '.', row['Maturity'], row['Domicile'], ', ', row['Marketplace']
+			cb_arr.append(row)
+
+	return pd.DataFrame(cb_arr)
+
 def Flag_vs_Grouping(df_orig, df_cb):
 	df_for = df_orig[df_orig['Foreign Issue Flag\n(eg Yankee)\n(Y/N)'] == 'Yes']
 
@@ -103,8 +127,9 @@ def Flag_vs_Grouping(df_orig, df_cb):
 	print 'Number of cross-border bonds found: ', df_cb.shape[0]
 	print 'Number of cross-border bonds without foreign flag: ', \
 			df_cb[df_cb['Foreign Issue Flag\n(eg Yankee)\n(Y/N)'] != 'Yes'].shape[0]
-	
 
+	df_cb[df_cb['Foreign Issue Flag\n(eg Yankee)\n(Y/N)'] != 'Yes'].to_csv('cb but not foreign flagged.csv')
+	
 def Group_Monthly(df):
 	""" 
 		Group data into subsections of month and nation. 
