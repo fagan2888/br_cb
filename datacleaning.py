@@ -45,6 +45,43 @@ column names for cleaned_df:
  'Principal\nAmount\n($ mil)',
  'Principal \nAmt - in \nthis Mkt \n(euro mil)' 
 """
+#calculate number of issuance and notional amount each time period
+def issueNum_notional(df, postfix,date_col, notional_col):
+    if notional_col not in list(df):
+        raise Exception(notional_col +  " is not in the dataframe!")
+    
+    grouped_year = df.groupby([date_col])
+    
+    issueNum_ls = []
+    notional_ls = []
+    key_ls = []
+    
+    for key, group in grouped_year:
+        issueNum_ls.append(len(group[notional_col]))
+        notional_ls.append(group[notional_col].sum())
+        key_ls.append(str(key))
+    
+    return_dict = {"Issue Num " + postfix: issueNum_ls, "Notional " + postfix: notional_ls}
+    return_df = pd.DataFrame(return_dict, index = key_ls)
+    
+    return return_df
+    
+#plot number of issuance and notional amount each time period
+def plotissueNum_notional(df, bar_cols, line_cols, filename):
+    fig = plt.figure(figsize = (18, 12))
+    
+    ax = df[bar_cols].plot(kind = 'bar', use_index = True)
+    ax.set_ylabel("Total notional amount (mil)")
+    ax.legend(bar_cols, loc = 0, fontsize = 8)
+    ax2 = ax.twinx()
+    
+    ax2.plot(ax.get_xticks(),df[line_cols].values, linestyle='-', marker='o', linewidth=2.0)
+    ax2.set_ylabel("Number of issuance")
+    ax2.legend(line_cols,loc = 0, fontsize = 8)
+    fig.savefig("/Users/leicui/blackrock_data/" + filename, format = "jpg", dpi = 200)
+    fig.clear()
+    
+    
 #plot number of issuance each year according to split type
 def notionalAmountByYearPlot(df, date_col, splitType, notionalType, filename):
     grouped_year = df.groupby([date_col])
@@ -139,6 +176,8 @@ if __name__ == '__main__':
     cleaned_df["Issue_year"] = cleaned_df["Issue\nDate"].dt.year
     cleaned_df["Issue_month"] = cleaned_df["Issue\nDate"].dt.month
     
+      
+    
     #split data to SSA and corporate bonds
     SSA_df = cleaned_df[cleaned_df['Issue\nType\nDescription'] == 'Agency, Supranational, Sovereign']
     SSA_df.index = np.arange(len(SSA_df.Issue_month))
@@ -146,22 +185,30 @@ if __name__ == '__main__':
     corporate_df = cleaned_df[cleaned_df["Issue\nType\nDescription"].isin(corporate_ls)]
     corporate_df.index = np.arange(len(corporate_df.Issue_month))
     
+    #number of issuance each year and total notional amount each year
+    issueNum_SSA_df = issueNum_notional(SSA_df, "SSA","Issue_year", "Principal\nAmount\n($ mil)")
+    issueNum_corp_df = issueNum_notional(corporate_df, "corp", "Issue_year", "Principal\nAmount\n($ mil)")
+    
+    issueNum_df = pd.concat([issueNum_SSA_df,issueNum_corp_df], axis = 1)
+    plotissueNum_notional(issueNum_df, ['Notional SSA', 'Notional corp'], ['Issue Num SSA', 'Issue Num corp'], "issueNum_notional.jpg")
+    
+    """
     #number of issuance each year in different market
-    #numIssueByYearPlot(SSA_df, "Issue_year", "Bond\nType\nCode", "numIssueByYear_SSA.jpg")
-    #numIssueByYearPlot(corporate_df, "Issue_year", "Bond\nType\nCode", "numIssueByYear_corp.jpg")
+    numIssueByYearPlot(SSA_df, "Issue_year", "Bond\nType\nCode", "numIssueByYear_SSA.jpg")
+    numIssueByYearPlot(corporate_df, "Issue_year", "Bond\nType\nCode", "numIssueByYear_corp.jpg")
     
     #number of issuance for each ratings
-    """
     numIssueByYearPlot(SSA_df, "Issue_year","Stan-\ndard\n &\nPoor's\nRating", "ratings_SSA.jpg")
     numIssueByYearPlot(corporate_df, "Issue_year","Stan-\ndard\n &\nPoor's\nRating", "ratings_corp.jpg")
     
-    
+    #notional amount for each rating category each year    
     notionalAmountByYearPlot(SSA_df, "Issue_year", "Stan-\ndard\n &\nPoor's\nRating", 'Principal\nAmount\n($ mil)',"notionalamount_SSA.jpg")
     notionalAmountByYearPlot(corporate_df, "Issue_year", "Stan-\ndard\n &\nPoor's\nRating", 'Principal\nAmount\n($ mil)',"notionalamount_corp.jpg")
-    """
+    
+    # distribution of maturity type each year
     maturityByYearPlot(SSA_df, "Issue_year", 'Issue\nDate', 'Maturity', "Maturity_SSA.jpg")
     maturityByYearPlot(corporate_df, "Issue_year", 'Issue\nDate', 'Maturity', "Maturity_corp.jpg")
-    
+    """
     
     
     
