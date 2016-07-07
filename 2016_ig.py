@@ -12,12 +12,12 @@ def main():
 	filename5 = 'currency codes.csv'
 
 	data_0809 = '2008-2009 cleaned.csv'
-	df_0809 = pd.read_csv(path + data_0809, index_col='IssueDate', #usecols=use_cols,
-					parse_dates=True, infer_datetime_format=True, na_values=np.nan)
+	data_1012 = '2010-2012 cleaned.csv'
+	data_1316 = '2013-2016 cleaned.csv'
+	
+	df = Merge_Dfs([data_0809, data_1012, data_1316], path)
 
-	df = df_0809
-
-	'''df = pd.read_csv(path + filename4, index_col='Issue\nDate', #usecols=use_cols,
+	'''df = pd.read_csv(path + filename4, index_col='Issue\nDate',
 					parse_dates=True, infer_datetime_format=True, na_values=np.nan)'''
 
 	df_domicile = pd.read_csv(data_path + filename2)
@@ -32,7 +32,7 @@ def main():
 
 	df_cb = Compare_Dom_Mktplc(df, df_euro_list)
 	#df_cb = Compare_Nation_Mktplc(df, df_euro_list)
-	df_cb = Add_Global_Bonds(df_cb, df)
+	#df_cb = Add_Global_Bonds(df_cb, df)
 
 	Flag_vs_Grouping(df, df_cb)
 
@@ -56,6 +56,9 @@ def Convert_Column_Types(df):
 	return df
 
 def Convert_Curr_Codes(df, df_curr_codes):
+	""" 
+		Convert currency codes to country names to compare to marketplace. 
+	"""
 	dict_curr_codes = df_curr_codes.set_index('Code')['Country'].to_dict()
 
 	curr_code_arr = df['DenominationsCurrency2']	# currency column in SDC data
@@ -162,19 +165,18 @@ def Add_Global_Bonds(df_cb, df):
 	df_global = df[df['TypeofSecurity'].str.contains('Global')]
 	df_global = df_global[df_global['Foreign Issue Flag(eg Yankee)(Y/N)'] == 'No']
 	df_merged = df_cb.merge(df_global, how="outer")
-	print df_merged.shape[0]
 
 	return df_merged
 
 def Flag_vs_Grouping(df_orig, df_cb):
 	df_for = df_orig[df_orig['Foreign Issue Flag(eg Yankee)(Y/N)'] == 'Yes']
+	df_merge = df_cb.merge(df_for, how="outer")
 
 	print 'Number of foreign flagged bonds: ', df_for.shape[0]
 	print 'Number of cross-border bonds found: ', df_cb.shape[0]
-	print 'Number of cross-border bonds without foreign flag: ', \
-			df_cb[df_cb['Foreign Issue Flag(eg Yankee)(Y/N)'] != 'Yes'].shape[0]
+	print 'Total number of cross-border and foreign flag bonds: ', df_merge.shape[0]
 
-	df_cb[df_cb['Foreign Issue Flag(eg Yankee)(Y/N)'] != 'Yes'].to_csv('cb but not foreign flagged.csv')
+	df_cb[df_cb['Foreign Issue Flag(eg Yankee)(Y/N)'] != 'Yes'].to_csv('All cross-border & foreign flagged.csv')
 
 if __name__ == '__main__':
 	main()
