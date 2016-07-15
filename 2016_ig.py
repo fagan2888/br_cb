@@ -19,7 +19,8 @@ def main():
 	df = Convert_Column_Types(df)
 
 	dom_name_np = Convert_Dom_Codes(df, df_domicile)
-	curr_code_np = Parse_Curr_Codes(df, df_curr_codes)
+	curr_codes = Parse_Curr_Codes(df, df_curr_codes)
+	curr_names = Get_Curr_Names(df, df_curr_codes)
 	df['Domicile'] = dom_name_np
 
 
@@ -49,6 +50,9 @@ def Convert_Column_Types(df):
 
 	return df
 
+def Get_Curr_Names(df, df_curr_codes):
+	pass
+
 def Parse_Curr_Codes(df, df_curr_codes):
 	""" 
 		Parse currency codes from prinicipal and currency in single column.
@@ -58,7 +62,20 @@ def Parse_Curr_Codes(df, df_curr_codes):
 	dict_curr_codes = df_curr_codes.set_index('Code')['Country'].to_dict()
 
 	# format: [<prinicipal dollar amount i.e. (100.00)> <country code i.e. (BA)]
-	curr_code_arr = df['Prncpl Amt \r\nw/Curr of \r\nIss - in this\r\nMkt (mil)']
+	curr_princ_arr = df['Prncpl Amt \r\nw/Curr of \r\nIss - in this\r\nMkt (mil)'].values
+
+	curr_code_arr = []
+
+	new_arr = np.array([str.split(x) for x in curr_princ_arr])
+	for item in new_arr:
+		try:
+			curr_code_arr.append(item[1])
+		except:
+			curr_code_arr.append('NaN')
+
+	# Make sure no missed country codes
+	assert (len(curr_code_arr) == len(curr_princ_arr))
+
 
 	'''curr_name_arr = []
 	miss_code = []
