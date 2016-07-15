@@ -24,34 +24,36 @@ ROOTDIR = "/Users/leicui/blackrock_data/figures/"
 #test_df = since16_df[since16_df['Bond\nType\nCode'].isin(FOREIGN_BOND_TYPE_CODE)]
  
 """
-['Issuer',
- 'IssueType2',
- 'BondTypeCode',
- 'Bond Type',
- 'Foreign Issue Flag(eg Yankee)(Y/N)',
- 'Business Description',
- 'Nation',
- 'Industry',
- 'IssueDate',
- 'Maturity',
- 'DenominationsCurrency2',
- 'Coupon(%)',
- 'OfferYieldto Maturity(%)',
- "Stan-dard&Poor's",
- 'MoodyRating',
- 'FitchRating',
- 'Prncpl Amtin Curr ofIss - in thisMkt (mil)',
- 'PrincipalAmountIn Currency(mil)',
- 'Prncpl Amtin Curr ofIss - in thisMkt (mil).1',
- 'PrincipalAmount($ mil)',
- 'PrincipalAmt - inthis Mkt(euro mil)',
- 'DomicileNationCode',
- 'Marketplace',
- 'TypeofSecurity',
- 'SpreadtoBench-Mark',
- 'LiborSpread',
+['Issue Date',
+ 'Benchmark',
  'Benchmark Treasury',
- 'Unnamed: 27']
+ 'Bond Type',
+ 'BondTypeCode',
+ 'Business Description',
+ 'Coupon(%)',
+ 'DenominationsCurrency2',
+ 'DomicileNationCode',
+ 'FitchRating',
+ 'Foreign Issue Flag(eg Yankee)(Y/N)',
+ 'Industry',
+ 'IssueType2',
+ 'Issuer',
+ 'LiborSpread',
+ 'Marketplace',
+ 'Maturity',
+ 'MoodyRating',
+ 'Nation',
+ 'OfferYieldto Maturity(%)',
+ 'PrincipalAmount($ mil)',
+ 'PrincipalAmountIn Currency(mil)',
+ 'PrincipalAmt - inthis Mkt(euro mil)',
+ 'Prncpl Amtin Curr ofIss - in thisMkt (mil)',
+ 'Prncpl Amtin Curr ofIss - in thisMkt (mil).1',
+ 'SpreadtoBench-Mark',
+ "Stan-dard&Poor's",
+ 'Treasury',
+ 'TypeofSecurity',
+ 'Domicile']
 """
 
 def dateStamp2datetime(DateSeries):
@@ -93,14 +95,16 @@ def plotissueNum_notional(df, bar_cols, line_cols, filename):
     ax = df[bar_cols].plot(kind = 'bar', use_index = True)
     ax.set_ylabel("Total notional amount (mil)")
     ax.legend(bar_cols, loc = 0, fontsize = 8)
+    ax.ticklabel_format(axis='y', style='sci', scilimits=(-2,2))
     ax2 = ax.twinx()
     
     ax2.plot(ax.get_xticks(),df[line_cols].values, linestyle='-', marker='o', linewidth=2.0)
     ax2.set_ylabel("Number of issuance")
     ax2.legend(line_cols,loc = 0, fontsize = 8)
+    ax2.ticklabel_format(axis='y', style='sci', scilimits=(-2,2))
     
     fig = ax.get_figure()
-    fig.savefig(ROOTDIR + filename, format = "jpg", dpi = 200)
+    fig.savefig(ROOTDIR + filename, format = "jpg", dpi = 150)
     fig.clear()
     
         
@@ -168,11 +172,14 @@ def numIssueByYearBar(df, date_col, splitType, filename):
 def numIssueByYearPie(df, date_col, splitType, top, filename, col = 3, row = 3):
     grouped_year = df.groupby([date_col])
     i = 1
+    colors = ['yellowgreen', 'gold', 'lightskyblue', 'lightcoral', "pink", 'red', "green"]
     fig = plt.figure(figsize = (8*col, 8*row))
     for k, group in grouped_year:
-        type_count_df = group[splitType].value_counts().order(ascending = False).head(top)
+        type_count_df = group[splitType].value_counts().order(ascending = False)
+        subsum = type_count_df[(top + 1):].sum()
+        type_count_df = type_count_df[:(top+1)].append(pd.Series([subsum], index = ["others"]))
         ax = fig.add_subplot(row, col, i)
-        ax.pie(type_count_df.values, labels = type_count_df.index,  autopct='%1.1f%%')
+        ax.pie(type_count_df.values, labels = type_count_df.index,  autopct='%1.1f%%', colors = colors)
         ax.set_title("year " + str(k))
         i+=1
     
@@ -227,19 +234,25 @@ if __name__ == '__main__':
     #cleaned_df = pd.read_excel("/Users/leicui/blackrock_data/All Cross Border Issuance all since 2008 with Foreign Bond Type.xlsx", \
     #                            sheetname = "Request 3",parse_dates=True ,infer_datetime_format=True)
     
-    raw1_df = pd.read_csv("/Users/leicui/blackrock_data/2008-2009 cleaned.csv", sep = ',', parse_dates = True, infer_datetime_format=True) 
+    #raw1_df = pd.read_csv("/Users/leicui/blackrock_data/2008-2009 cleaned.csv", sep = ',', parse_dates = True, infer_datetime_format=True) 
     #del raw1_df['Unnamed: 27']
-    raw2_df = pd.read_csv("/Users/leicui/blackrock_data/2010-2012 cleaned.csv", sep = ',', parse_dates = True, infer_datetime_format=True)     
-    raw3_df = pd.read_csv("/Users/leicui/blackrock_data/2013-2016 cleaned.csv", sep = ',', parse_dates = True, infer_datetime_format=True)
+    #raw2_df = pd.read_csv("/Users/leicui/blackrock_data/2010-2012 cleaned.csv", sep = ',', parse_dates = True, infer_datetime_format=True)     
+    #raw3_df = pd.read_csv("/Users/leicui/blackrock_data/2013-2016 cleaned.csv", sep = ',', parse_dates = True, infer_datetime_format=True)
     #del raw3_df['Unnamed: 27']   
+
+    #cleaned_df = raw1_df.append(raw2_df, ignore_index = True)
+    #cleaned_df = cleaned_df.append(raw3_df, ignore_index = True)
     
-    cleaned_df = raw1_df.append(raw2_df, ignore_index = True)
-    cleaned_df = cleaned_df.append(raw3_df, ignore_index = True)
+
     #only select data with foreign bond flag to be yes
-    cleaned_df = cleaned_df.ix[cleaned_df["Foreign Issue Flag(eg Yankee)(Y/N)"] == "Yes", ]
+    cleaned_df = pd.read_csv("/Users/leicui/blackrock_data/All cross-border & foreign flagged.csv", sep = ',', parse_dates = True, infer_datetime_format=True)    
+      
+    #cleaned_df = cleaned_df.ix[cleaned_df["Foreign Issue Flag(eg Yankee)(Y/N)"] == "Yes", ]
     #convert IsssueDate and Maturity to datetime type
-    cleaned_df["IssueDate"] = pd.to_datetime(cleaned_df["IssueDate"], infer_datetime_format=True)
+    
+    cleaned_df["IssueDate"] = pd.to_datetime(cleaned_df["IssueDate"], infer_datetime_format = True)
     cleaned_df["IssueDate"] = dateStamp2datetime(cleaned_df["IssueDate"])
+    cleaned_df = cleaned_df[cleaned_df.Maturity != "2013-30"]
     temp1_df = cleaned_df[(cleaned_df["Maturity"] != 'n/a') & ( cleaned_df["Maturity"] != 'Perpet.')]
     temp2_df = cleaned_df[cleaned_df["IssueType2"].isin(['n/a', 'Perpet.'])]
     temp1_df["Maturity"] = pd.to_datetime(temp1_df["Maturity"], infer_datetime_format=True)
@@ -255,8 +268,8 @@ if __name__ == '__main__':
     cleaned_df["bond_terms"] = calterm(cleaned_df,'IssueDate', 'Maturity')
     
     
-      
     
+
     #split data to SSA and corporate bonds
     SSA_df = cleaned_df[cleaned_df['IssueType2'] == 'AS']
     SSA_df.index = np.arange(len(SSA_df.Issue_month))
@@ -271,7 +284,7 @@ if __name__ == '__main__':
     issueNum_df = pd.concat([issueNum_SSA_df,issueNum_corp_df], axis = 1)
     plotissueNum_notional(issueNum_df, ['Notional SSA', 'Notional corp'], ['Issue Num SSA', 'Issue Num corp'], "issueNum_notional.jpg")
     
-    
+    '''
     #number of issuance each year in different market
     numIssueByYearBar(SSA_df[SSA_df.BondTypeCode.notnull()], "Issue_year", "BondTypeCode", "numIssueByYear_SSA.jpg")
     numIssueByYearBar(corporate_df[corporate_df.BondTypeCode.notnull()], "Issue_year", "BondTypeCode", "numIssueByYear_corp.jpg")
@@ -285,18 +298,18 @@ if __name__ == '__main__':
     notionalAmountByYearPlot(corporate_df, "Issue_year", "Stan-dard&Poor's", 'PrincipalAmount($ mil)',"notionalamount_corp.jpg")
 
     # distribution of maturity type each year
-    plotHistogram(SSA_df, "Issue_year", 'bond_terms', "Maturity_SSA.jpg")
-    plotHistogram(corporate_df, "Issue_year", 'bond_terms', "Maturity_corp.jpg")
+    plotHistogram(SSA_df[SSA_df.bond_terms >  0], "Issue_year", 'bond_terms', "Maturity_SSA.jpg")
+    plotHistogram(corporate_df[corporate_df.bond_terms > 0], "Issue_year", 'bond_terms', "Maturity_corp.jpg")
     
     #calculate the issue frequecy per month 
     plotHistogram(SSA_df, "Issue_year", "Issue_month", "Issue_frequency_SSA.jpg")
     plotHistogram(corporate_df, "Issue_year", "Issue_month", "Issue_frequency_corp.jpg")
-    
+    '''
     #corporates or SSA in which country issue cross-border bonds most
-    numIssueByYearPie(SSA_df, "Issue_year", "Nation", 5,"Issue_nation_SSA.jpg")
-    numIssueByYearPie(corporate_df, "Issue_year", "Nation", 5, "Issue_nation_corp.jpg")
-
+    numIssueByYearPie(SSA_df, "Issue_year", 'Domicile', 5,"Issue_nation_SSA.jpg")
+    numIssueByYearPie(corporate_df, "Issue_year", 'Domicile', 5, "Issue_nation_corp.jpg")
     
+
     
     
     
