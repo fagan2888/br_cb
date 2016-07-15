@@ -5,41 +5,35 @@ import numpy as np
 def main():
 	path = 'C:\Users\Alex\Desktop\\br_cb_Data\\'	# modify to own path for running
 	data_path = 'C:\Users\Alex\Desktop\\br_cb\Data\\'
-	filename = 'csv IG issuance since Jan 2016.csv'
+	filename1 = '2007-2016 DATA with ISIN.csv'
 	filename2 = 'domicile_dictionary.csv'
 	filename3 = 'Euro_countries_list.csv'
-	filename4 = 'non convertible bonds issuance since Jan 2016.csv'
-	filename5 = 'currency codes.csv'
+	filename4 = 'currency codes.csv'
 
-	data_0809 = '2008-2009 cleaned.csv'
-	data_1012 = '2010-2012 cleaned.csv'
-	data_1316 = '2013-2016 cleaned.csv'
-	
-	df = Merge_Dfs([data_0809, data_1012, data_1316], path)
-
-	'''df = pd.read_csv(path + filename4, index_col='Issue\nDate',
-					parse_dates=True, infer_datetime_format=True, na_values=np.nan)'''
+	df = pd.read_csv(path + filename1)
 
 	df_domicile = pd.read_csv(data_path + filename2)
 	df_euro_list = pd.read_csv(data_path + filename3)
-	df_curr_codes = pd.read_csv(data_path + filename5)
+	df_curr_codes = pd.read_csv(data_path + filename4)
 
 	df = Convert_Column_Types(df)
 
 	dom_name_np = Convert_Dom_Codes(df, df_domicile)
-	#curr_code_np = Convert_Curr_Codes(df, df_curr_codes)
+	curr_code_np = Parse_Curr_Codes(df, df_curr_codes)
 	df['Domicile'] = dom_name_np
 
-	df_cb = Compare_Dom_Mktplc(df, df_euro_list)
+
+
+	'''df_cb = Compare_Dom_Mktplc(df, df_euro_list)
 	#df_cb = Compare_Nation_Mktplc(df, df_euro_list)
 	#df_cb = Add_Global_Bonds(df_cb, df)
 
-	Flag_vs_Grouping(df, df_cb)
+	Flag_vs_Grouping(df, df_cb)'''
 
 def Merge_Dfs(data_filenames, path):
 	frames = []
 	for file in data_filenames:
-		df = pd.read_csv(path + file, index_col='IssueDate', #usecols=use_cols,
+		df = pd.read_csv(path + file, index_col='Issue\nDate', #usecols=use_cols,
 					parse_dates=True, infer_datetime_format=True, na_values=np.nan,
 					low_memory=False)
 		frames.append(df)
@@ -55,14 +49,18 @@ def Convert_Column_Types(df):
 
 	return df
 
-def Convert_Curr_Codes(df, df_curr_codes):
+def Parse_Curr_Codes(df, df_curr_codes):
 	""" 
-		Convert currency codes to country names to compare to marketplace. 
+		Parse currency codes from prinicipal and currency in single column.
+		format: [<prinicipal dollar amount i.e. (100.00)> <country code i.e. (BA)].
+		Then assign the codes to countries by using the SDC currency dictionary.
 	"""
 	dict_curr_codes = df_curr_codes.set_index('Code')['Country'].to_dict()
 
-	curr_code_arr = df['DenominationsCurrency2']	# currency column in SDC data
-	curr_name_arr = []
+	# format: [<prinicipal dollar amount i.e. (100.00)> <country code i.e. (BA)]
+	curr_code_arr = df['Prncpl Amt \r\nw/Curr of \r\nIss - in this\r\nMkt (mil)']
+
+	'''curr_name_arr = []
 	miss_code = []
 	for code in curr_code_arr:
 		# append nan values to keep same size as original df
@@ -80,7 +78,7 @@ def Convert_Curr_Codes(df, df_curr_codes):
 
 	curr_name_np = np.array(curr_name_arr)
 
-	return curr_name_np	
+	return curr_name_np	'''
 
 def Convert_Dom_Codes(df, df_domicile):
 	"""
@@ -91,7 +89,7 @@ def Convert_Dom_Codes(df, df_domicile):
 	"""
 	dict_domicile = df_domicile.set_index('abbreviation')['name'].to_dict()
 
-	dom_code_arr = df['DomicileNationCode']
+	dom_code_arr = df['Domicile\r\nNation\r\nCode']
 	dom_name_arr = []
 	miss_code = []
 	for code in dom_code_arr:
@@ -170,13 +168,16 @@ def Add_Global_Bonds(df_cb, df):
 
 def Flag_vs_Grouping(df_orig, df_cb):
 	df_for = df_orig[df_orig['Foreign Issue Flag(eg Yankee)(Y/N)'] == 'Yes']
-	df_merge = df_cb.merge(df_for, how="outer")
+	df_cb_no = df_cb[df_cb['Foreign Issue Flag(eg Yankee)(Y/N)'] != 'Yes']
 
 	print 'Number of foreign flagged bonds: ', df_for.shape[0]
 	print 'Number of cross-border bonds found: ', df_cb.shape[0]
-	print 'Total number of cross-border and foreign flag bonds: ', df_merge.shape[0]
+	print 'Number of cross-border bonds without foreign flag: ', df_cb_no.shape[0]
 
-	df_cb[df_cb['Foreign Issue Flag(eg Yankee)(Y/N)'] != 'Yes'].to_csv('All cross-border & foreign flagged.csv')
+	df_concat = pd.concat([df_cb_no, df_for])
+	df_concat.sort_index(inplace=True)
+
+	df_concat.to_csv('All cross-border & foreign flagged.csv')
 
 if __name__ == '__main__':
 	main()
