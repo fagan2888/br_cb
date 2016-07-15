@@ -3,38 +3,42 @@ import numpy as np
 
 
 def main():
-	path = 'C:\Users\Alex\Desktop\\'	# modify to own path for running
+	path = 'C:\Users\Alex\Desktop\\br_cb_Data\\'	# modify to own path for running
 	data_path = 'C:\Users\Alex\Desktop\\br_cb\Data\\'
-	filename = 'csv IG issuance since Jan 2016.csv'
+	filename1 = '2007-2016 DATA with ISIN.csv'
 	filename2 = 'domicile_dictionary.csv'
 	filename3 = 'Euro_countries_list.csv'
-	filename4 = 'non convertible bonds issuance since Jan 2016.csv'
+	filename4 = 'currency codes.csv'
 
-	use_cols = ['Maturity\n(mm/dd/yyyy)', 'Issuer', 'Nation', 'Issue\nDate',
-				'Primary\nExchange\nWhere\nIssuer\'s\nStock\nTrades', 'Coupon\n (%)', 
-				'Offer\nYield\nto Maturity\n (%)', 'Stan-\ndard\n &\nPoor\'s\nRating', 
-				'Interest\nPayment\nFrequency', 'Cpn\nType', 'Marketplace', 'Market\nArea',
-				'Domicile\nNation\nCode', 'Foreign Issue Flag\n(eg Yankee)\n(Y/N)', 
-				'Denominations\nCurrency']
-
-	df = pd.read_csv(path + filename4, index_col='Issue\nDate', #usecols=use_cols,
-					parse_dates=True, infer_datetime_format=True, na_values=np.nan)
+	df = pd.read_csv(path + filename1)
 
 	df_domicile = pd.read_csv(data_path + filename2)
 	df_euro_list = pd.read_csv(data_path + filename3)
+	df_curr_codes = pd.read_csv(data_path + filename4)
 
 	df = Convert_Column_Types(df)
 
 	dom_name_np = Convert_Dom_Codes(df, df_domicile)
+	curr_code_np = Parse_Curr_Codes(df, df_curr_codes)
 	df['Domicile'] = dom_name_np
 
-	#df_cb = Compare_Dom_Mktplc(df, df_euro_list)
-	df_cb = Compare_Nation_Mktplc(df, df_euro_list)
 
-	Flag_vs_Grouping(df, df_cb)
 
-def Foreign_Issue(df):
-	df_for = df['Foreign Issue Flag\n(eg Yankee)\n(Y/N)']
+	'''df_cb = Compare_Dom_Mktplc(df, df_euro_list)
+	#df_cb = Compare_Nation_Mktplc(df, df_euro_list)
+	#df_cb = Add_Global_Bonds(df_cb, df)
+
+	Flag_vs_Grouping(df, df_cb)'''
+
+def Merge_Dfs(data_filenames, path):
+	frames = []
+	for file in data_filenames:
+		df = pd.read_csv(path + file, index_col='Issue\nDate', #usecols=use_cols,
+					parse_dates=True, infer_datetime_format=True, na_values=np.nan,
+					low_memory=False)
+		frames.append(df)
+
+	return pd.concat(frames)
 
 def Convert_Column_Types(df):
 	for y in df.columns:
@@ -45,6 +49,37 @@ def Convert_Column_Types(df):
 
 	return df
 
+def Parse_Curr_Codes(df, df_curr_codes):
+	""" 
+		Parse currency codes from prinicipal and currency in single column.
+		format: [<prinicipal dollar amount i.e. (100.00)> <country code i.e. (BA)].
+		Then assign the codes to countries by using the SDC currency dictionary.
+	"""
+	dict_curr_codes = df_curr_codes.set_index('Code')['Country'].to_dict()
+
+	# format: [<prinicipal dollar amount i.e. (100.00)> <country code i.e. (BA)]
+	curr_code_arr = df['Prncpl Amt \r\nw/Curr of \r\nIss - in this\r\nMkt (mil)']
+
+	'''curr_name_arr = []
+	miss_code = []
+	for code in curr_code_arr:
+		# append nan values to keep same size as original df
+		if code == 'nan':
+			curr_name_arr.append('nan')
+		else:
+			try:
+				curr_name_arr.append(dict_domicile[code])
+			except:
+				miss_code.append(code)
+				pass
+
+	# Make sure no missed country codes
+	assert (len(miss_code) == 0), np.unique(miss_code)
+
+	curr_name_np = np.array(curr_name_arr)
+
+	return curr_name_np	'''
+
 def Convert_Dom_Codes(df, df_domicile):
 	"""
 		Define cross-border as differing nation and currency, of differing nation and 
@@ -54,7 +89,7 @@ def Convert_Dom_Codes(df, df_domicile):
 	"""
 	dict_domicile = df_domicile.set_index('abbreviation')['name'].to_dict()
 
-	dom_code_arr = df['Domicile\nNation\nCode']
+	dom_code_arr = df['Domicile\r\nNation\r\nCode']
 	dom_name_arr = []
 	miss_code = []
 	for code in dom_code_arr:
@@ -91,7 +126,7 @@ def Compare_Dom_Mktplc(df, df_euro):
 			(row['Domicile'] in df_euro['Country'].values and \
 		   	'Euro' not in row['Marketplace'] and 'EURO' not in row['Marketplace']) and \
 		   	row['Domicile'] != 'nan':
-		   	#print row['Domicile'], row['Marketplace']
+		   	#print row['Domicile'], ':', row['Marketplace']
 			cb_arr.append(row)
 
 	return pd.DataFrame(cb_arr)
@@ -120,34 +155,29 @@ def Compare_Nation_Mktplc(df, df_euro):
 
 	return pd.DataFrame(cb_arr)
 
+def Add_Global_Bonds(df_cb, df):
+	"""
+		Add all global bonds not filtered by foreign flag and merge with
+		already created list of cross_border bonds.
+	"""
+	df_global = df[df['TypeofSecurity'].str.contains('Global')]
+	df_global = df_global[df_global['Foreign Issue Flag(eg Yankee)(Y/N)'] == 'No']
+	df_merged = df_cb.merge(df_global, how="outer")
+
+	return df_merged
+
 def Flag_vs_Grouping(df_orig, df_cb):
-	df_for = df_orig[df_orig['Foreign Issue Flag\n(eg Yankee)\n(Y/N)'] == 'Yes']
+	df_for = df_orig[df_orig['Foreign Issue Flag(eg Yankee)(Y/N)'] == 'Yes']
+	df_cb_no = df_cb[df_cb['Foreign Issue Flag(eg Yankee)(Y/N)'] != 'Yes']
 
 	print 'Number of foreign flagged bonds: ', df_for.shape[0]
 	print 'Number of cross-border bonds found: ', df_cb.shape[0]
-	print 'Number of cross-border bonds without foreign flag: ', \
-			df_cb[df_cb['Foreign Issue Flag\n(eg Yankee)\n(Y/N)'] != 'Yes'].shape[0]
+	print 'Number of cross-border bonds without foreign flag: ', df_cb_no.shape[0]
 
-	df_cb[df_cb['Foreign Issue Flag\n(eg Yankee)\n(Y/N)'] != 'Yes'].to_csv('cb but not foreign flagged.csv')
-	
-def Group_Monthly(df):
-	""" 
-		Group data into subsections of month and nation. 
-		Create a dataframe of the subsections with the month, nation, and number of 
-		entries in a subsection as the 'count' column.
-		Sort by decreasing 'count'.
+	df_concat = pd.concat([df_cb_no, df_for])
+	df_concat.sort_index(inplace=True)
 
-	"""
-	grouped = df.groupby([pd.TimeGrouper(freq='M'), 'Nation'])
-	df_mth_nat_ct = pd.DataFrame(
-						data=np.array(
-							[[name[0], name[1], group.shape[0]] for name,group in grouped]
-						),
-						columns=['date', 'nation', 'count']).set_index('date')
-
-	df_mth_nat_ct.sort(columns=['count', 'nation'], ascending=False, inplace=True)
-
-	print df_mth_nat_ct
+	df_concat.to_csv('All cross-border & foreign flagged.csv')
 
 if __name__ == '__main__':
 	main()
