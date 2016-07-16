@@ -4,13 +4,13 @@ import numpy as np
 
 def main():
 	path = 'C:\Users\Alex\Desktop\\br_cb_Data\\'	# modify to own path for running
-	data_path = 'C:\Users\Alex\Desktop\\br_cb\Data\\'
+	data_path = 'C:\Users\Alex\Desktop\\br_cb\Data\\'	# modify to own path for running
 	filename1 = '2007-2016 DATA with ISIN.csv'
 	filename2 = 'domicile_dictionary.csv'
 	filename3 = 'Euro_countries_list.csv'
 	filename4 = 'currency codes_mod.csv'
 
-	df = pd.read_csv(path + filename1)
+	df = pd.read_csv(path + filename1, low_memory=False)
 
 	df_domicile = pd.read_csv(data_path + filename2)
 	df_euro_list = pd.read_csv(data_path + filename3)
@@ -22,11 +22,11 @@ def main():
 	curr_codes = Parse_Curr_Codes(df, df_curr_codes)
 	df['Currency'] = Get_Curr_Names(curr_codes, df_curr_codes)
 
-	df_cb_curr = Compare_Curr_Mkt(df, df_euro_list)
+	df_cb_curr = Compare_Curr_Dom(df, df_euro_list)
 
 	df_cb_dom = Compare_Dom_Mktplc(df, df_euro_list)
-	#df_cb = Compare_Nation_Mktplc(df, df_euro_list)
-	#df_cb = Add_Global_Bonds(df_cb, df)
+	#df_cb_dom = Compare_Nation_Mktplc(df, df_euro_list)
+	#df_cb_glob = Add_Global_Bonds(df_cb, df)
 
 	Flag_vs_Grouping(df, df_cb_curr, df_cb_dom)
 
@@ -131,24 +131,25 @@ def Convert_Dom_Codes(df, df_domicile):
 
 	return dom_name_np	
 
-def Compare_Curr_Mkt(df, df_euro_list):
+def Compare_Curr_Dom(df, df_euro_list):
 	"""
 		Compare issuance currency and marketplace. If they are different then add bond to 
 		cb_arr. Speical case if bond is part of European Union, then check if the marketplace 
 		isn't the EURO. 
 	"""
+
 	curr_names = [str.split(x)[0] for x in df['Currency'].values]
 	df['Curr Abbrev'] = curr_names
 
 	cb_arr = []
 
 	for index, row in df.iterrows():
-		if 	row['Curr Abbrev'].lower() not in row['Marketplace'].lower() \
-			and (row['Curr Abbrev'] not in df_euro_list['Country'].values and \
-				'euro' in row['Marketplace'].lower()) \
-			and row['Curr Abbrev'] != 'NaN':
+		if 	row['Curr Abbrev'].lower() not in row['Domicile'].lower() and \
+			(row['Domicile'] in df_euro_list['Country'].values and \
+			 row['Curr Abbrev'] not in df_euro_list['Country'].values) and \
+			row['Curr Abbrev'] != 'NaN':
 
-		   	#print row['Currency'].lower(), ':', row['Marketplace'].lower()
+		   	#print row['Currency'].lower(), ':', row['Domicile'].lower()
 		   	cb_arr.append(row)
 
 	return pd.DataFrame(cb_arr)
@@ -223,7 +224,7 @@ def Flag_vs_Grouping(df_orig, df_cb_curr, df_cb_dom):
 	print 'Number of cross-border dominicile without foreign flag: ', df_cb_dom_no.shape[0]
 	print 'Total number of cross-border bonds with all filters:', df_concat.shape[0]
 
-	df_concat.to_csv('All cross-border & foreign flagged.csv')
+	df_concat.to_csv('All cross-border & foreign flagged 2.csv')
 
 if __name__ == '__main__':
 	main()
