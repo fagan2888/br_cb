@@ -24,36 +24,43 @@ ROOTDIR = "/Users/leicui/blackrock_data/figures/"
 #test_df = since16_df[since16_df['Bond\nType\nCode'].isin(FOREIGN_BOND_TYPE_CODE)]
  
 """
-['Issue Date',
- 'Benchmark',
- 'Benchmark Treasury',
- 'Bond Type',
+['Unnamed:0',
+ 'IssueDate',
+ 'Name',
+ 'BasisPointSpread',
+ 'BenchmarkTreasury',
  'BondTypeCode',
- 'Business Description',
+ 'BondType',
+ 'BusinessDescription',
  'Coupon(%)',
- 'DenominationsCurrency2',
+ 'DenominationsCurrency',
  'DomicileNationCode',
+ 'Exch-ange-ableCode',
+ 'Exchange-ableType',
  'FitchRating',
- 'Foreign Issue Flag(eg Yankee)(Y/N)',
+ 'ForeignIssueFlag(egYankee)(Y/N)',
+ 'ISIN',
  'Industry',
- 'IssueType2',
- 'Issuer',
+ 'IssueType',
  'LiborSpread',
  'Marketplace',
  'Maturity',
  'MoodyRating',
  'Nation',
- 'OfferYieldto Maturity(%)',
- 'PrincipalAmount($ mil)',
- 'PrincipalAmountIn Currency(mil)',
- 'PrincipalAmt - inthis Mkt(euro mil)',
- 'Prncpl Amtin Curr ofIss - in thisMkt (mil)',
- 'Prncpl Amtin Curr ofIss - in thisMkt (mil).1',
+ 'Nation.1',
+ 'OfferYieldtoMaturity(%)',
+ 'PrincipalAmount($mil)',
+ 'PrincipalAmt-inthisMkt(euromil)',
+ 'PrincipalAmt-sumofallMkts($mil)',
+ 'PrincipalAmt-sumofallMkts(euromil)',
+ 'PrncplAmtinCurrofIss-inthisMkt(mil)',
+ 'PrncplAmtw/CurrofIss-inthisMkt(mil)',
+ 'PrncplAmtw/CurrofIss-sumofallMkts(mil)',
  'SpreadtoBench-Mark',
- "Stan-dard&Poor's",
- 'Treasury',
- 'TypeofSecurity',
- 'Domicile']
+ "Stan-dard&Poor'sRating",
+ 'Domicile',
+ 'Currency',
+ 'CurrAbbrev']
 """
 
 def dateStamp2datetime(DateSeries):
@@ -231,22 +238,25 @@ def plotHistogram(df, date_col, class_col, filename, *argv):
 
 
 if __name__ == '__main__':
-    #cleaned_df = pd.read_excel("/Users/leicui/blackrock_data/All Cross Border Issuance all since 2008 with Foreign Bond Type.xlsx", \
-    #                            sheetname = "Request 3",parse_dates=True ,infer_datetime_format=True)
     
-    #raw1_df = pd.read_csv("/Users/leicui/blackrock_data/2008-2009 cleaned.csv", sep = ',', parse_dates = True, infer_datetime_format=True) 
-    #del raw1_df['Unnamed: 27']
-    #raw2_df = pd.read_csv("/Users/leicui/blackrock_data/2010-2012 cleaned.csv", sep = ',', parse_dates = True, infer_datetime_format=True)     
-    #raw3_df = pd.read_csv("/Users/leicui/blackrock_data/2013-2016 cleaned.csv", sep = ',', parse_dates = True, infer_datetime_format=True)
-    #del raw3_df['Unnamed: 27']   
-
-    #cleaned_df = raw1_df.append(raw2_df, ignore_index = True)
-    #cleaned_df = cleaned_df.append(raw3_df, ignore_index = True)
-    
-
     #only select data with foreign bond flag to be yes
-    cleaned_df = pd.read_csv("/Users/leicui/blackrock_data/All cross-border & foreign flagged.csv", sep = ',', parse_dates = True, infer_datetime_format=True)    
-      
+    #cleaned_df = pd.read_csv("/Users/leicui/blackrock_data/All cross-border & foreign flagged.csv", sep = ',', parse_dates = True, infer_datetime_format=True)    
+    
+    cleaned_df = pd.read_csv("/Users/leicui/blackrock_data/All cross-border & foreign flagged using domicile.csv", sep = ',', parse_dates = True, infer_datetime_format=True)    
+    
+    #remove '\n' '\r' in the column names
+    rawname_ls = list(cleaned_df)
+    name_ls = []
+   
+    for name in rawname_ls:
+        name = name.replace('\r','',10)
+        name = name.replace('\n','',10)
+        name = name.replace(' ','', 10)
+        name_ls.append(name)
+        
+    cleaned_df.columns = name_ls
+    del cleaned_df['Unnamed:0']
+ 
     #cleaned_df = cleaned_df.ix[cleaned_df["Foreign Issue Flag(eg Yankee)(Y/N)"] == "Yes", ]
     #convert IsssueDate and Maturity to datetime type
     
@@ -254,28 +264,26 @@ if __name__ == '__main__':
     cleaned_df["IssueDate"] = dateStamp2datetime(cleaned_df["IssueDate"])
     cleaned_df = cleaned_df[cleaned_df.Maturity != "2013-30"]
     temp1_df = cleaned_df[(cleaned_df["Maturity"] != 'n/a') & ( cleaned_df["Maturity"] != 'Perpet.')]
-    temp2_df = cleaned_df[cleaned_df["IssueType2"].isin(['n/a', 'Perpet.'])]
+    temp2_df = cleaned_df[cleaned_df["IssueType"].isin(['n/a', 'Perpet.'])]
     temp1_df["Maturity"] = pd.to_datetime(temp1_df["Maturity"], infer_datetime_format=True)
     temp1_df["Maturity"] = dateStamp2datetime(temp1_df["Maturity"])
     cleaned_df = temp1_df.append(temp2_df, ignore_index = True)
     
-    cleaned_df["PrincipalAmountIn Currency(mil)"] = [float(notional) for notional in cleaned_df["PrincipalAmountIn Currency(mil)"]]
-    
-    
-    
+    #cleaned_df["PrincipalAmountIn Currency(mil)"] = [float(notional) for notional in cleaned_df["PrincipalAmountIn Currency(mil)"]]
+   
     cleaned_df["Issue_year"] = cleaned_df["IssueDate"].dt.year
     cleaned_df["Issue_month"] = cleaned_df["IssueDate"].dt.month
     cleaned_df["bond_terms"] = calterm(cleaned_df,'IssueDate', 'Maturity')
-    
-    
-    
 
     #split data to SSA and corporate bonds
-    SSA_df = cleaned_df[cleaned_df['IssueType2'] == 'AS']
+    SSA_df = cleaned_df[cleaned_df['IssueType'] == 'AS']
     SSA_df.index = np.arange(len(SSA_df.Issue_month))
     corporate_ls = ['IG',  'EMIG', 'FC', 'HY', 'EM']
-    corporate_df = cleaned_df[cleaned_df["IssueType2"].isin(corporate_ls)]
+    corporate_df = cleaned_df[cleaned_df["IssueType"].isin(corporate_ls)]
     corporate_df.index = np.arange(len(corporate_df.Issue_month))
+    SSA_df.to_csv("/Users/leicui/blackrock_data/SSA.csv", index = False)
+    corporate_df.to_csv("/Users/leicui/blackrock_data/corp.csv", index = False)
+    
     
     #number of issuance each year and total notional amount each year
     issueNum_SSA_df = issueNum_notional(SSA_df, "SSA","Issue_year", 'PrincipalAmount($ mil)')
@@ -284,7 +292,7 @@ if __name__ == '__main__':
     issueNum_df = pd.concat([issueNum_SSA_df,issueNum_corp_df], axis = 1)
     plotissueNum_notional(issueNum_df, ['Notional SSA', 'Notional corp'], ['Issue Num SSA', 'Issue Num corp'], "issueNum_notional.jpg")
     
-    '''
+
     #number of issuance each year in different market
     numIssueByYearBar(SSA_df[SSA_df.BondTypeCode.notnull()], "Issue_year", "BondTypeCode", "numIssueByYear_SSA.jpg")
     numIssueByYearBar(corporate_df[corporate_df.BondTypeCode.notnull()], "Issue_year", "BondTypeCode", "numIssueByYear_corp.jpg")
@@ -304,7 +312,7 @@ if __name__ == '__main__':
     #calculate the issue frequecy per month 
     plotHistogram(SSA_df, "Issue_year", "Issue_month", "Issue_frequency_SSA.jpg")
     plotHistogram(corporate_df, "Issue_year", "Issue_month", "Issue_frequency_corp.jpg")
-    '''
+    
     #corporates or SSA in which country issue cross-border bonds most
     numIssueByYearPie(SSA_df, "Issue_year", 'Domicile', 5,"Issue_nation_SSA.jpg")
     numIssueByYearPie(corporate_df, "Issue_year", 'Domicile', 5, "Issue_nation_corp.jpg")
