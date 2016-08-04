@@ -10,20 +10,23 @@ def main():
 	filename2 = 'domicile_dictionary.csv'
 	filename3 = 'Euro_countries_list.csv'
 	filename4 = 'currency codes_mod.csv'
+	filename5 = 'currency_codes_dict.csv'
 
 	df = pd.read_csv(path + filename1, low_memory=False)
 	#print df.columns.values
-	df = Clean_Data(df)
+	#df = Clean_Data(df)
 
 	df_domicile = pd.read_csv(data_path + filename2)
 	df_euro_list = pd.read_csv(data_path + filename3)
-	df_curr_codes = pd.read_csv(data_path + filename4)
+	df_curr_codes = pd.read_csv(data_path + filename5)
+
+	print df_euro_list['Country'].values
 
 	df = Convert_Column_Types(df)
 
 	df['Domicile'] = Convert_Dom_Codes(df, df_domicile)
 	curr_codes = Parse_Curr_Codes(df, df_curr_codes)
-	df['Currency'] = Get_Curr_Names(curr_codes, df_curr_codes)
+	df['Currency'] = Get_Curr_Names(curr_codes, df_curr_codes, df_euro_list)
 
 	df_cb_curr = Compare_Curr_Dom(df, df_euro_list)
 
@@ -40,12 +43,14 @@ def Clean_Data(cleaned_df):
 	temp1_df = cleaned_df[(cleaned_df["Maturity"] != 'n/a') & ( cleaned_df["Maturity"] != 'Perpet.') & \
 						  (cleaned_df['Maturity'] != 'BAD DATE')]
 
-	temp1_df['Maturity'] = temp1_df['Maturity'].astype(str)
-	temp1_df['Maturity Callable'] = np.empty(temp1_df.shape[0])
+	#temp1_df['Maturity'] = temp1_df['Maturity'].astype(str)
+	#temp1_df['Maturity Callable'] = np.empty(temp1_df.shape[0])
 
-	for i in range(0, temp1_df.shape[0]):
+	'''for i in range(0, temp1_df.shape[0]):
+		
 		if '-' in str(temp1_df['Maturity'].values[i]):
 			try:
+				# make all year ends 4 digits long
 				if len(temp1_df['Maturity'].values[i].split('-')[1]) == 1:
 					temp1_df['Maturity Callable'].values[i] = '200' + temp1_df['Maturity'].values[i].split('-')[1]
 				else:
@@ -54,9 +59,13 @@ def Clean_Data(cleaned_df):
 			except:
 				# dates are --/--/22 or 09/--/21
 				temp1_df['Maturity'].values[i] = np.nan
-				pass
+				pass'''
 	
-	temp1_df.to_csv('cols.csv')
+	'''for i in range(0, temp1_df.shape[0]):
+		if '19' in str(temp1_df['Maturity'].values[i])[-4:]:
+			print str(temp1_df['Maturity'].values[i])'''
+
+	#temp1_df.to_csv('cols.csv')
 
 	temp2_df = cleaned_df[cleaned_df["Issue\r\nType"].isin(['n/a', 'Perpet.'])]
 	temp1_df["Maturity"] = pd.to_datetime(temp1_df["Maturity"], infer_datetime_format=True, errors='coerce')
@@ -133,10 +142,11 @@ def Convert_Column_Types(df):
 
 	return df
 
-def Get_Curr_Names(curr_codes, df_curr_codes):
+def Get_Curr_Names(curr_codes, df_curr_codes, df_euro_list):
 	"""
 		Create a dictionary mapping of currency codes to country names from SDC
 		currency codes list. Map every currency code from dataset to country name.
+		Special case if country in euro, then currency name set to EURO.
 	"""
 	dict_curr = df_curr_codes.set_index('Code')['Country'].to_dict()
 
@@ -148,7 +158,14 @@ def Get_Curr_Names(curr_codes, df_curr_codes):
 			curr_name_arr.append(np.nan)
 		else:
 			try:
-				curr_name_arr.append(dict_curr[code])
+				# check if currency issuer country is in euro
+				# if it is set currency name to euro instead of issuer country
+				curr_name = dict_curr[code]
+				if curr_name in df_euro_list['Country'].values:
+					curr_name_arr.append('EURO')
+				# else set currency name to issuing country name
+				else:
+					curr_name_arr.append(curr_name)
 			except:
 				print '--' + str(code) + '---'
 				miss_code.append(code)
