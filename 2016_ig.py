@@ -23,7 +23,8 @@ def main():
 	filename4 = 'currency codes_mod.csv'
 	filename5 = 'currency_codes_dict.csv'
 	filename6 = 'ratings_dict.csv'
-	rating_cols = ['Fitch\r\nRating', 'Moody\r\nRating', 'Stan-\r\ndard\r\n &\r\nPoor\'s\r\nRating']
+	rating_cols_df = ['Fitch\r\nRating', 'Moody\r\nRating', 'Stan-\r\ndard\r\n &\r\nPoor\'s\r\nRating']
+	rating_cols_dict = ['Fitch', 'Moody\s', 'S&P']
 
 	df = pd.read_csv(path + filename1, low_memory=False)
 
@@ -42,19 +43,23 @@ def main():
 	df['Domicile'] = Convert_Dom_Codes(df, df_domicile)
 	curr_codes = Parse_Curr_Codes(df, df_curr_codes)
 	df['Currency'] = Get_Curr_Names(curr_codes, df_curr_codes, df_euro_list)
-	df.dropna(subset=['Currency'], inplace=True)
-	df = df[df['Currency'] != 'nan']
-	#df['Overall Rating'] = Average_Ratings(df, rating_cols, df_ratings_dict)
+	df.dropna(subset=['Currency'], inplace=True)	# removing any empty currencies
+	df = df[df['Currency'] != 'nan']				# removing any empty currencies
+	#df['Overall Rating'] = Average_Ratings(df, rating_cols_df, rating_cols_df, df_ratings_dict)
 
 	df.to_csv('cols.csv')
 
-	df_cb_curr = Compare_Curr_Dom(df, df_euro_list)
+	df_cb_curr_dom = Compare_Curr_Dom(df, df_euro_list)
+	df_cb_dom_dom = Compare_Dom_Mktplc(df, df_euro_list)
 
-	df_cb_dom = Compare_Dom_Mktplc(df, df_euro_list)
-	#df_cb_dom = Compare_Nation_Mktplc(df, df_euro_list)
+	df_cb_dom_nat = Compare_Nation_Mktplc(df, df_euro_list)
+	df_cb_curr_nat = Compare_Curr_Nation(df, df_euro_list)
 	#df_cb_glob = Add_Global_Bonds(df_cb, df)
 
-	Flag_vs_Grouping(df, df_cb_curr, df_cb_dom, df_euro_list)
+	outfile_dom = 'All cross-border & foreign flagged v_1 domicile.csv'
+	outfile_nation = 'All cross-border & foreign flagged v_1 nation.csv'
+	Flag_vs_Grouping(df, df_cb_curr_dom, df_cb_dom_dom, df_euro_list, outfile_dom)
+	Flag_vs_Grouping(df, df_cb_curr_nat, df_cb_dom_nat, df_euro_list, outfile_nation)
 
 @timing
 def Clean_Data(cleaned_df):
@@ -238,12 +243,30 @@ def Convert_Dom_Codes(df, df_domicile):
 	return dom_name_np	
 
 @timing
-def Average_Ratings(df, rating_cols, df_ratings_dict):
-	df_ratings = df[rating_cols]
+def Average_Ratings(df, rating_cols_df, rating_cols_dict, df_ratings_dict):
+	df_ratings = df[rating_cols_df]
+	average_ratings = []
 	for index, row in df.iterrows():
 		divisor = 0
-		for i in range(0, len(rating_cols)):
-			sum_rating += df_ratings_dictdf[rating_cols[i]]
+		sum_rating = 0
+		for i in range(0, len(rating_cols_df)):
+			try:
+				rating = df_ratings_dict[rating_cols_dict[i]]
+				rating_dict_col = df_ratings_dict[rating_cols_df[i]].values
+				sum_rating += df_ratings_dict.loc[rating == rating_dict_col]['Value'].values[0]
+				divisor += 1
+				print sum_rating
+			except:
+				sum_rating += 0
+
+		if divisor != 0:
+			sum_rating = int(sum_rating/divisor)
+		
+		average_ratings.append(df_ratings_dict.loc[df_ratings_dict['Value'] == \
+													sum_rating]['S&P'].values[0])
+
+
+	return average_ratings
 
 @timing
 def Compare_Curr_Dom(df, df_euro_list):
@@ -258,6 +281,27 @@ def Compare_Curr_Dom(df, df_euro_list):
 	for index, row in df.iterrows():
 		if 	row['Currency'].lower() != row['Domicile'].lower() and \
 			(row['Domicile'] in df_euro_list['Country'].values and \
+			 row['Currency'].lower() != 'euro') and \
+			(row['Currency'] != 'nan'):
+
+		   	#print row['Currency'].lower(), ':', row['Domicile'].lower()
+		   	cb_arr.append(row)
+
+	return pd.DataFrame(cb_arr)
+
+@timing
+def Compare_Curr_Nation(df, df_euro_list):
+	"""
+		Compare issuance currency and marketplace. If they are different then add bond to 
+		cb_arr. Speical case if bond is part of European Union, then check if the marketplace 
+		isn't the EURO. 
+	"""
+
+	cb_arr = []
+
+	for index, row in df.iterrows():
+		if 	row['Currency'].lower() != row['Nation'].lower() and \
+			(row['Nation'] in df_euro_list['Country'].values and \
 			 row['Currency'].lower() != 'euro') and \
 			(row['Currency'] != 'nan'):
 
@@ -345,7 +389,7 @@ def Domestic_Filter_not_Curr_Filter(df_cb_curr, df_cb_dom):
 	df.to_csv('cols.csv')
 
 @timing
-def Flag_vs_Grouping(df_orig, df_cb_curr, df_cb_dom, df_euro_list):
+def Flag_vs_Grouping(df_orig, df_cb_curr, df_cb_dom, df_euro_list, outfile):
 	df_for = df_orig[df_orig['Foreign Issue Flag\r\n(eg Yankee)\r\n(Y/N)'] == 'Yes']
 	df_cb_curr_no = df_cb_curr[df_cb_curr['Foreign Issue Flag\r\n(eg Yankee)\r\n(Y/N)'] != 'Yes']
 	df_cb_dom_no = df_cb_dom[df_cb_dom['Foreign Issue Flag\r\n(eg Yankee)\r\n(Y/N)'] != 'Yes']
@@ -363,7 +407,7 @@ def Flag_vs_Grouping(df_orig, df_cb_curr, df_cb_dom, df_euro_list):
 	print 'Number of cross-border dominicile without foreign flag: ', df_cb_dom_no.shape[0]
 	print 'Total number of cross-border bonds with all filters:', df_concat.shape[0]
 
-	df_concat.to_csv('All cross-border & foreign flagged v_3.csv')
+	df_concat.to_csv(outfile)
 
 if __name__ == '__main__':
 	main()
