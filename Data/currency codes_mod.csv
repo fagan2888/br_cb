@@ -1,0 +1,212 @@
+Country,Code
+Afghanistan Afghani,AFA
+Albania Lek,ALL
+Algeria Dinar,DZD
+Andorra Franc,ADF
+Andorra Peseta,ADP
+Angola New Kwanza,AON
+Argentina Austral,ARA
+Argentina Peso,ARP
+Armenia Dram,AMD
+Aruba Florin,AFI
+Aruba Guilder,AG
+Australia Dollar,AU
+Austria Schilling,AS
+Azerbaija Manat,AZM
+Bahama Dollar,BHD
+Bahraini Dinar,BD
+Bangladesh Taka,BT
+Bangladesh Taka,BDT
+Barbados Dollar,BAD
+Belarusia Rubble,BYR
+Belgium Franc,BFR
+Belize Dollar,BLZ
+Bermuda Dollar,BER
+Bhutan Ngultrum,BTN
+Bolivia Boliviano,BB
+Bosnia Cvt. Mark,BCM
+Bosnia Marka,BAM
+Botswana Pula,BOP
+Brazil Cruzeiro,CZ
+Brazil Real,BR
+UK Pound,STG
+Brunei Dollars,BID
+Bulgaria Lev,LEV
+Burma Kyat,BK
+Burundi Franc,BIF
+Cambodia Riel,CBR
+Canada Dollar,C
+Cape Verde Escudo,CVE
+Cayman Dollar,CD
+CFA Franc BEAC,XAF
+CFA Franc,CFA
+CFP Franc,XPF
+Chile Peso,CE
+China Yuan,CY
+Colombia Peso,CP
+Comoros Franc,KMF
+Costa Rica Colon,CRC
+Croatia Kuna,CTK
+Cuba Peso,CUP
+Cyprus Pound,CYP
+Czech Crowns,CC
+Czech Koruna,CK
+Danish Krone,DKR
+Deutsche Mark,DM
+Djibouti Franc,DJF
+Dominican Repub Peso,DRP
+Dutch Guilder,DFL
+East Carib Dollar,ECD
+East Caribbean Dolla,XCD
+Ecuador Sucre,ES
+Egypt Pound,EP
+El Salvador Colon,SVC
+Estonia Kroon,EST
+Ethiopia Birr,EB
+EURO,EUR
+Europ Composite Unit,ECN
+Europ Unit Account,EUA
+European Curr. Unit,ECU
+Falkland Islnd Pound,FKP
+Fijian Dollar,FD
+Finland Markka,FM
+France Franc,FFR
+Gabon Franc,GBF
+Gambia Dalasi,GMD
+Georgia Lari,GEL
+Ghana Cedis,GC
+Gibraltar Pound,GIP
+Greece Drachma,DR
+Guatemala Quetzales,QZ
+Guinea Franc,GUF
+Guyana Dollar,GD
+Haitia Gourde,HG
+Hondura Lempira,HL
+Hong Kong Dollar,HK
+Hungaria Forint,HF
+Iceland Kronur,IKR
+India Rupee,RE
+Indonesia Rupiah,RH
+Iran Rial,IRR
+Iraq Dinar,IRD
+Ireland Punt,IR
+Israel Shekel,IS
+Italy Lira,LIR
+Ivory Coast Franc,ICF
+Jamaica Dollar,JM
+Japanese Yen,Y
+Jordan Dinar,JD
+Kazakhstan Tenge,KZT
+Kenya Shilling,KS
+Korea Won,WON
+Kuwaiti Dinar,KD
+Lao Kip,LAK
+Latvia Lats,LAT
+Lebanon Pound,LP
+Lesotho Loti,LSL
+Liberia Dollar,LBD
+Libya Dinar,LID
+Liechtenstein Franc,LCH
+Lithuania Litas,LIT
+Luxembourg Franc,LFR
+Macau Pacata,PAC
+Macedonia Denar,MKD
+Madagascar Franc,MDG
+Malagasy Ariary,MGA
+Malagasy Franc,MGF
+Malawi Kwacha,MK
+Malawi Tambala,MTA
+Malaysia Ringgit,RG
+Maldive Rufiyaa,MVR
+Malta Lira,ML
+Malta Pound,MTP
+Mauritian Ouguiya,MR
+Mauritius Rupee,MUR
+Mexica Peso,MP
+Moldovan Leu,MDL
+Monaco Franc,MNF
+Mongolia Tugrik,MT
+Moroccan Dirham,MD
+Mozambique Metical,MZM
+Multicurrency,MC
+Myanmar Kyat,MMK
+Namibia Dollar,NAD
+Namibia Rand,NAB
+Nepal Rupee,NP
+Netherlands Ant. Guilder,NAG
+New Zealand Dollar,NZ
+Nicaragua Cordoba,NGC
+Nigeria Kobo,NKB
+Nigeria naira,NIN
+None,NON
+North Korea Won,KPW
+Norwegia Krone,NKR
+Omani Riyal,OMR
+Pakistan Rupee,PR
+Panama Balboa,PB
+Papua N. Guinea Kina,PGK
+Paraguay Guarani,PGG
+Peru Inti,PI
+Peru Sol,PS
+Philippine Peso,PP
+Poland Zloty,PZ
+Portugual Escudo,ESC
+Qatar Dinar,QAT
+Qatar Riyal,QR
+Romania Lei,RL
+Russia Rouble,RR
+Rwanda Franc,RWF
+Rwanda Franc,RW
+Salvador Colon,EC
+Sao Tome Dobra,STD
+Saudi Arabia Riyal,SR
+Serbia Dinar,SED
+Seychelles Rupee,SEY
+Sierra Leone Leone,SQL
+Singapore Dollar,SG
+Slovakia Crown,SK
+Slovakia Koruna,SKK
+Slovenia Tolar,SLD
+Solomon Isl. Dollar,SBD
+Somali Shilling,SOS
+Somoan Tala,WST
+South African Rand,SAR
+Spain Peseta,PES
+Special Drawing Rts,SDR
+Sri Lankan Rupee,SLR
+St. Helena Pound,SHP
+Sterling /Deutschmark,SD
+Sterling /Fr Franc,SF
+Sudan Dinar,SDD
+Sudan Pound,SUP
+Suriname Dollar,SRD
+Suriname Guilder,SRG
+Swaziland Lilangeni,SZL
+Sweden Krona,SKR
+Switzerland Franc,SFR
+Syrian pound,SYP
+Taiwan Dollar,TW
+Tanzania Shilling,TS
+Thai Baht,BA
+Tonga Pa'anga,TOP
+Trin. & Tobago Dlr,TTD
+Tunisia Dinar,TD
+Turkey Lira,TL
+Turkmenistan Manat,TMM
+U.S. Dollar,US
+Uganda Shilling,UGS
+Ukrain Hryvna,UKH
+Ukrain Karbovanet,UKB
+Unidad De Fomento Ch,UF
+Unidad De Inversion ,UDI
+Unknown alpha_code,UNK
+Uruguay Peso,UP
+Arab Em. Dirham,UAD
+Vanuatua Vatu,VV
+Venezuela Bolivar,BO
+Vietnam Dong,VTD
+Yemen Rial,YER
+Yugoslavia Dinar,YND
+Zaire Zaire,ZZ
+Zambia Kwacha,ZK
+Zimbabwe Dollar,ZIM
