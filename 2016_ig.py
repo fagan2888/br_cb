@@ -321,7 +321,7 @@ def Compare_Curr_Nation(df, df_euro_list):
 	cb_arr = []
 
 	for index, row in df.iterrows():
-		if 	(row['Currency'].lower() != row['Nation'].lower() and \
+		if 	((row['Currency'].lower() != row['Nation'].lower()) and (row['Currency'].lower() != row['Nation.1'].lower()) and \
 			\
 			((row['Nation'] in df_euro_list['Country'].values and \
 			 row['Currency'].lower() != 'euro')  or \
@@ -430,7 +430,6 @@ def Remove_Curr_Filter_From_Mkt_Filter(df_cb_curr, df_cb_dom, df_euro_list):
 		the domestic currency filter and remove from those classified by marketplace filter. 
 		Special case if currency is EURO. Then if country in the euro as well remove it as well.
 	"""
-	print 'here'
 	df_cb_curr_no = df_cb_curr[df_cb_curr['Foreign Issue Flag\r\n(eg Yankee)\r\n(Y/N)'] != 'Yes']
 	df_cb_dom_no = df_cb_dom[df_cb_dom['Foreign Issue Flag\r\n(eg Yankee)\r\n(Y/N)'] != 'Yes']
 
@@ -445,7 +444,7 @@ def Remove_Curr_Filter_From_Mkt_Filter(df_cb_curr, df_cb_dom, df_euro_list):
 		(row['Currency'] == 'EURO' and row['Domicile'] in df_euro_list['Country'].values):
 			df_cb_dom_no.drop(index, inplace=True)
 
-	print 'done'
+	print len(df_cb_curr_no)
 
 	return df_cb_dom_no
 
