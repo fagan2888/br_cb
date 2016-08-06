@@ -9,7 +9,7 @@ def timing(f):
         time1 = time.time()
         ret = f(*args)
         time2 = time.time()
-        print '%s function took %0.3f ms' % (f.func_name, (time2-time1)*1000.0)
+        print '%s function took %0.3f s' % (f.func_name, (time2-time1)*1.0)
         return ret
     return wrap
 
@@ -27,6 +27,7 @@ def main():
 	rating_cols_dict = ['Fitch', 'Moody\'s', 'S&P']
 
 	df = pd.read_csv(path + filename1, low_memory=False)
+	#print df.columns
 
 	#print df.columns.values
 	df = Clean_Data(df)
@@ -45,7 +46,7 @@ def main():
 	df['Currency'] = Get_Curr_Names(curr_codes, df_curr_codes, df_euro_list)
 	df.dropna(subset=['Currency'], inplace=True)	# removing any empty currencies
 	df = df[df['Currency'] != 'nan']				# removing any empty currencies
-	df['Overall Rating S&P'] = Average_Ratings(df, df_ratings_dict, rating_cols_df, rating_cols_dict)
+	#df['Overall Rating S&P'] = Average_Ratings(df, df_ratings_dict, rating_cols_df, rating_cols_dict)
 
 	df_cb_curr_dom = Compare_Curr_Dom(df, df_euro_list)
 	df_cb_dom_dom = Compare_Dom_Mktplc(df, df_euro_list)
@@ -63,22 +64,24 @@ def main():
 
 @timing
 def Clean_Data(cleaned_df):
-	cleaned_df["Issue\r\nDate"] = pd.to_datetime(cleaned_df["Issue\r\nDate"], infer_datetime_format = True)
-	cleaned_df["Issue\r\nDate"] = dateStamp2datetime(cleaned_df["Issue\r\nDate"])
+	iss_date_col = "Issue\r\nDate"
+	iss_type_col = "Issue\r\nType"
+	cleaned_df[iss_date_col] = pd.to_datetime(cleaned_df[iss_date_col], infer_datetime_format = True)
+	cleaned_df[iss_date_col] = dateStamp2datetime(cleaned_df[iss_date_col])
 	cleaned_df = cleaned_df[cleaned_df.Maturity != "2013-30"]
 	temp1_df = cleaned_df[(cleaned_df["Maturity"] != 'n/a') & ( cleaned_df["Maturity"] != 'Perpet.') & \
 						  (cleaned_df['Maturity'] != 'BAD DATE')]
 
-	temp2_df = cleaned_df[cleaned_df["Issue\r\nType"].isin(['n/a', 'Perpet.'])]
+	temp2_df = cleaned_df[cleaned_df[iss_type_col].isin(['n/a', 'Perpet.'])]
 	temp1_df["Maturity"] = pd.to_datetime(temp1_df["Maturity"], infer_datetime_format=True, errors='coerce')
 	temp1_df["Maturity"] = dateStamp2datetime(temp1_df["Maturity"])
 	cleaned_df = temp1_df.append(temp2_df, ignore_index = True)
 
 	#cleaned_df["PrincipalAmountIn Currency(mil)"] = [float(notional) for notional in cleaned_df["PrincipalAmountIn Currency(mil)"]]
 
-	cleaned_df["Issue_year"] = cleaned_df["Issue\r\nDate"].dt.year
-	cleaned_df["Issue_month"] = cleaned_df["Issue\r\nDate"].dt.month
-	cleaned_df["bond_terms"] = calterm(cleaned_df,'Issue\r\nDate', 'Maturity')
+	cleaned_df["Issue_year"] = cleaned_df[iss_date_col].dt.year
+	cleaned_df["Issue_month"] = cleaned_df[iss_date_col].dt.month
+	cleaned_df["bond_terms"] = calterm(cleaned_df, iss_date_col, 'Maturity')
 
 	return cleaned_df
 
@@ -195,7 +198,8 @@ def Parse_Curr_Codes(df, df_curr_codes):
 	dict_curr_codes = df_curr_codes.set_index('Code')['Country'].to_dict()
 
 	# format: [<prinicipal dollar amount i.e. (100.00)> <country code i.e. (BA)]
-	curr_princ_arr = df['Prncpl Amt \r\nw/Curr of \r\nIss - in this\r\nMkt (mil)'].values
+	princ_col = 'Prncpl Amt \r\nw/Curr of \r\nIss - in this\r\nMkt (mil)'
+	curr_princ_arr = df[princ_col].values
 
 	curr_code_arr = []
 
@@ -220,8 +224,9 @@ def Convert_Dom_Codes(df, df_domicile):
 		Convert Domicile Nation Code to the actual country name using df_domicile as dictionary.
 	"""
 	dict_domicile = df_domicile.set_index('abbreviation')['name'].to_dict()
+	domicile_col = 'Domicile\r\nNation\r\nCode'
 
-	dom_code_arr = df['Domicile\r\nNation\r\nCode']
+	dom_code_arr = df[domicile_col]
 	dom_name_arr = []
 	miss_code = []
 	for code in dom_code_arr:
@@ -292,10 +297,14 @@ def Compare_Curr_Dom(df, df_euro_list):
 	cb_arr = []
 
 	for index, row in df.iterrows():
-		if 	row['Currency'].lower() != row['Domicile'].lower() and \
-			(row['Domicile'] in df_euro_list['Country'].values and \
-			 row['Currency'].lower() != 'euro') and \
-			(row['Currency'] != 'nan'):
+		if 	(row['Currency'].lower() != row['Domicile'].lower() and \
+			((row['Domicile'] in df_euro_list['Country'].values and \
+			 row['Currency'].lower() != 'euro') or \
+			\
+			(row['Domicile'] not in df_euro_list['Country'].values))) and \
+			\
+			(row['Currency'].replace('.', '').lower() != row['Domicile'].replace('.', '').lower()) \
+			and (row['Currency'] != 'nan'):
 
 		   	cb_arr.append(row)
 
@@ -312,10 +321,15 @@ def Compare_Curr_Nation(df, df_euro_list):
 	cb_arr = []
 
 	for index, row in df.iterrows():
-		if 	row['Currency'].lower() != row['Nation'].lower() and \
-			(row['Nation'] in df_euro_list['Country'].values and \
-			 row['Currency'].lower() != 'euro') and \
-			(row['Currency'] != 'nan'):
+		if 	(row['Currency'].lower() != row['Nation'].lower() and \
+			\
+			((row['Nation'] in df_euro_list['Country'].values and \
+			 row['Currency'].lower() != 'euro')  or \
+			\
+			(row['Nation'] not in df_euro_list['Country'].values))) and \
+			\
+			(row['Currency'].replace('.', '').lower() != row['Nation'].replace('.', '').lower()) \
+			and (row['Currency'] != 'nan'):
 
 		   	#print row['Currency'].lower(), ':', row['Domicile'].lower()
 		   	cb_arr.append(row)
@@ -335,9 +349,14 @@ def Compare_Dom_Mktplc(df, df_euro):
 		# if domicile and marketplace don't match
 		# if they don't match, then if country is part of EU and marketplace isn't EU
 		# if they are nan, don't consider them
-		if 	row["Domicile"] not in row["Marketplace"] \
-			and (row['Domicile'] in df_euro['Country'].values and \
-		   		'euro' not in row['Marketplace'].lower()) \
+		if 	(row["Domicile"] not in row["Marketplace"] and \
+			((row['Domicile'] in df_euro['Country'].values and \
+		   		'euro' not in row['Marketplace'].lower()) or \
+			\
+		   	(row['Domicile'] not in df_euro['Country'].values))) and \
+			\
+			(row['Domicile'].replace('.', '').lower() not in \
+				row['Marketplace'].replace('.', '').lower()) \
 		    and	(row['Domicile'] != np.nan):
 		   	#print row['Domicile'], ':', row['Marketplace']
 			cb_arr.append(row)
@@ -359,9 +378,14 @@ def Compare_Nation_Mktplc(df, df_euro):
 		# if domicile and marketplace don't match
 		# if they don't match, then if country is part of EU and marketplace isn't EU
 		# if they are nan, don't consider them
-		if 	row["Nation"] not in row["Marketplace"] and \
-			(row['Nation'] in df_euro['Country'].values and \
-		   	'Euro' not in row['Marketplace'] and 'EURO' not in row['Marketplace']) and \
+		if 	(row["Nation"] not in row["Marketplace"] and \
+			((row['Nation'] in df_euro['Country'].values and \
+		   	'Euro' not in row['Marketplace'] and 'euro' not in row['Marketplace'].lower()) or \
+			\
+		   	(row['Nation'] not in df_euro['Country'].values))) and \
+			\
+		   	(row['Nation'].replace('.', '').lower() not in \
+				row['Marketplace'].replace('.', '').lower()) and \
 		   	(row['Nation'] != np.nan or row['Nation'] != 'nan'):
 
 	 		#print index, '.', row['Maturity'], row['Domicile'], ', ', row['Marketplace']
@@ -398,22 +422,30 @@ def Domestic_Filter_not_Curr_Filter(df_cb_curr, df_cb_dom, df_euro_list):
 			arr.append(row)
 
 	df = pd.DataFrame(arr)
-	df.to_csv('cols.csv')
 
+@timing
 def Remove_Curr_Filter_From_Mkt_Filter(df_cb_curr, df_cb_dom, df_euro_list):
 	"""
 		Gets the bonds classified by the domestic, marketplace filter and not classified by
 		the domestic currency filter and remove from those classified by marketplace filter. 
 		Special case if currency is EURO. Then if country in the euro as well remove it as well.
 	"""
+	print 'here'
 	df_cb_curr_no = df_cb_curr[df_cb_curr['Foreign Issue Flag\r\n(eg Yankee)\r\n(Y/N)'] != 'Yes']
 	df_cb_dom_no = df_cb_dom[df_cb_dom['Foreign Issue Flag\r\n(eg Yankee)\r\n(Y/N)'] != 'Yes']
 
+	print len(df_cb_curr_no)
+
 	arr = []
+	counter = 0
 	for index, row in df_cb_dom_no.iterrows():
+		#counter += 1
+		#print counter
 		if (row['Currency'] == row['Domicile']) or \
 		(row['Currency'] == 'EURO' and row['Domicile'] in df_euro_list['Country'].values):
 			df_cb_dom_no.drop(index, inplace=True)
+
+	print 'done'
 
 	return df_cb_dom_no
 
