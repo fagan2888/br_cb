@@ -3,25 +3,49 @@ import numpy as np
 
 path = r"C:\Users\Alex\Desktop\\br_cb_Data\Butterfly Currencies\\"
 
-def func():
+def func(term, name):
 	curr_files = ['AUD.xlsx', 'CAD.xlsx', 'EUR.xlsx', 'GBP.xlsx', 'JPY.xlsx', 
 				  'SEK.xlsx', 'USD.xlsx']
 	df_curr = []
 
 	for curr_file in curr_files:
-		df_curr.append(pd.read_excel(path + curr_file))
+		df = pd.read_excel(path + curr_file)
+		df.set_index('Dates', inplace=True)
+		curr = df['Currency'][0]
+		df = df.resample(term, how='mean', axis=0)
+		df['Currency'] = [curr] * df.shape[0]
+		df_curr.append(df)
 
 	df_concat = pd.concat(df_curr)
-	df_concat.set_index('Dates', inplace=True)
 	df_concat.drop(['Year', 'Month', 'Day'], axis=1, inplace=True)
 
-	df_concat = df_concat.resample("M", how='mean')
-
-	print (df_concat.head(10))
-
-	df_concat.to_csv('All_Butterfly_Spreads.csv')
+	df_concat.to_csv('All_Butterfly_Spreads_' + name + '.csv')
 
 if __name__ == '__main__':
-	func()
+	func('MS', 'monthly')	# MS = month start
+	func('AS', 'yearly')	# AS = year start
 
 
+'''
+B   business day frequency
+C   custom business day frequency (experimental)
+D   calendar day frequency
+W   weekly frequency
+M   month end frequency
+BM  business month end frequency
+MS  month start frequency
+BMS business month start frequency
+Q   quarter end frequency
+BQ  business quarter endfrequency
+QS  quarter start frequency
+BQS business quarter start frequency
+A   year end frequency
+BA  business year end frequency
+AS  year start frequency
+BAS business year start frequency
+H   hourly frequency
+T   minutely frequency
+S   secondly frequency
+L   milliseconds
+U   microseconds
+'''
