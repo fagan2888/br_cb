@@ -6,15 +6,22 @@ Created on Thu Jun 23 11:10:44 2016
 
 content: blackrock project
 """
+
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import datetime as dt
 from dateutil import relativedelta as rdelta
 
 plt.style.use("ggplot")
 
 FOREIGN_BOND_TYPE_CODE = ('AL', 'AR', 'BD', 'DA', 'DR', 'GA','KG', 'KA', 'MP', 'MA', 'MT', 'NA', 'RB', 'SA', 'SI', 'SO', 'YA')
-ROOTDIR = "/Users/leicui/blackrock_data/figures/"
+
+#change the root directory to your own
+ROOTDIR = "/Users/leicui/blackrock_data/figures/new/"
+
+
 #his_df = pd.read_excel("/Users/leicui/blackrock_data/bond issuance excluding domestic market.xlsx",\
 #                         sheetname = "Sheet1")
 
@@ -117,7 +124,7 @@ def plotissueNum_notional(df, bar_cols, line_cols, filename):
         
     
 #plot number of issuance each year according to split type
-def notionalAmountByYearPlot(df, date_col, splitType, notionalType, filename):
+def notionalAmountByYearPlot(df, date_col, splitType, notionalType, filename, top = None):
     grouped_year = df.groupby([date_col])
     i= 1
     fig = plt.figure(figsize = (24, 24))
@@ -130,12 +137,21 @@ def notionalAmountByYearPlot(df, date_col, splitType, notionalType, filename):
         for subkey, subgroup in subgroups:
             type_ls.append(subkey)
             amount_ls.append(subgroup[notionalType].sum())
+            
+        amount_sr = pd.Series(amount_ls, index = type_ls)
+
+        if top != None:
+            amount_sr = amount_sr.order(ascending = False)
+            subsum = amount_sr[(top + 1):].sum()
+            amount_sr = amount_sr[:(top + 1)].append(pd.Series([subsum], index = ["Others"]))
+    
+            
         
         ax = fig.add_subplot(3, 3, i)
-        y_pos = np.arange(len(type_ls))
-        rects = ax.bar(y_pos, amount_ls, align='center')
+        y_pos = np.arange(len(amount_sr.index))
+        rects = ax.bar(y_pos, amount_sr.values, align='center')
         ax.set_xticks(y_pos)
-        ax.set_xticklabels(type_ls)
+        ax.set_xticklabels(amount_sr.index)
         ax.set_ylabel(notionalType)
         ax.set_title("year " + str(k))
         i+=1
@@ -144,20 +160,26 @@ def notionalAmountByYearPlot(df, date_col, splitType, notionalType, filename):
         for rect in rects:
             height = rect.get_height()
             ax.text(rect.get_x() + rect.get_width()/2., height, '%d' % int(height),ha='center', va='bottom')
-        
+       
     fig.savefig(ROOTDIR + filename, format = "jpg", dpi = 200)
     fig.clear()
         
 
 #plot notional amount of issuance each year according to split type
-def numIssueByYearBar(df, date_col, splitType, filename):
+def numIssueByYearBar(df, date_col, splitType, filename, top = None):
     
     grouped_year = df.groupby([date_col])
     i= 1
     fig = plt.figure(figsize = (24, 24))
     
     for k, group in grouped_year:
-        type_count_df = group[splitType].value_counts()
+        if top != None:
+            type_count_df = group[splitType].value_counts().order(ascending = False)
+            subsum = type_count_df[(top + 1):].sum()
+            type_count_df = type_count_df[:(top + 1)].append(pd.Series([subsum], index = ["Others"]))
+        else:
+            type_count_df = group[splitType].value_counts()            
+        
         ax = fig.add_subplot(3, 3, i)
         type_list = list(type_count_df.index)
         y_pos = np.arange(len(type_list))
@@ -235,27 +257,21 @@ def plotHistogram(df, date_col, class_col, filename, *argv):
     fig.savefig(ROOTDIR + filename, format = "jpg", dpi = 200)
     fig.clear()
         
-
-
-if __name__ == '__main__':
-    
-    #only select data with foreign bond flag to be yes
-    #cleaned_df = pd.read_csv("/Users/leicui/blackrock_data/All cross-border & foreign flagged.csv", sep = ',', parse_dates = True, infer_datetime_format=True)    
-    
-    cleaned_df = pd.read_csv("/Users/leicui/blackrock_data/All cross-border & foreign flagged using domicile.csv", sep = ',', parse_dates = True, infer_datetime_format=True)    
+def cleaningData(filename):
+    cleaned_df = pd.read_csv("/Users/leicui/blackrock_data/" + filename, sep = ',', parse_dates = True, infer_datetime_format=True)    
     
     #remove '\n' '\r' in the column names
     rawname_ls = list(cleaned_df)
     name_ls = []
    
     for name in rawname_ls:
-        name = name.replace('\r','',10)
-        name = name.replace('\n','',10)
-        name = name.replace(' ','', 10)
+        name = name.replace('\r','',20)
+        name = name.replace('\n','',20)
+        name = name.replace(' ','', 20)
         name_ls.append(name)
         
     cleaned_df.columns = name_ls
-    del cleaned_df['Unnamed:0']
+    #del cleaned_df['Unnamed:0']
  
     #cleaned_df = cleaned_df.ix[cleaned_df["Foreign Issue Flag(eg Yankee)(Y/N)"] == "Yes", ]
     #convert IsssueDate and Maturity to datetime type
@@ -263,21 +279,54 @@ if __name__ == '__main__':
     cleaned_df["IssueDate"] = pd.to_datetime(cleaned_df["IssueDate"], infer_datetime_format = True)
     cleaned_df["IssueDate"] = dateStamp2datetime(cleaned_df["IssueDate"])
     cleaned_df = cleaned_df[cleaned_df.Maturity != "2013-30"]
-    temp1_df = cleaned_df[(cleaned_df["Maturity"] != 'n/a') & ( cleaned_df["Maturity"] != 'Perpet.')]
-    temp2_df = cleaned_df[cleaned_df["IssueType"].isin(['n/a', 'Perpet.'])]
-    temp1_df["Maturity"] = pd.to_datetime(temp1_df["Maturity"], infer_datetime_format=True)
-    temp1_df["Maturity"] = dateStamp2datetime(temp1_df["Maturity"])
-    cleaned_df = temp1_df.append(temp2_df, ignore_index = True)
+    #temp1_df = cleaned_df[(cleaned_df["Maturity"] != 'n/a') & ( cleaned_df["Maturity"] != 'Perpet.')]
+    cleaned_df = cleaned_df[~cleaned_df["Maturity"].isin(['n/a', 'Perpet.', 'NaT'])]
+    cleaned_df["Maturity"] = pd.to_datetime(cleaned_df["Maturity"], infer_datetime_format=True)
+    cleaned_df["Maturity"] = dateStamp2datetime(cleaned_df["Maturity"])
     
+    #cleaned_df = temp1_df.append(temp2_df, ignore_index = True)
+        
     #cleaned_df["PrincipalAmountIn Currency(mil)"] = [float(notional) for notional in cleaned_df["PrincipalAmountIn Currency(mil)"]]
    
     cleaned_df["Issue_year"] = cleaned_df["IssueDate"].dt.year
     cleaned_df["Issue_month"] = cleaned_df["IssueDate"].dt.month
-    cleaned_df["bond_terms"] = calterm(cleaned_df,'IssueDate', 'Maturity')
+    
+    #convert the wrong Maturity, some maturity with only 2 digits for year are converted to 19** by excel.
+    cleaned_df['Maturity_year'] = cleaned_df.Maturity.dt.year
+    cleaned_df['Maturity_month'] = cleaned_df.Maturity.dt.month
+    cleaned_df['Maturity_day'] = cleaned_df.Maturity.dt.day
+    
+    #cleaned_df.loc[cleaned_df.Maturity_year < 2000, 'Maturity_year'] = cleaned_df.loc[cleaned_df.Maturity_year < 2000, 'Maturity_year'] + 100
+    year_ls = []
 
+    for year in cleaned_df.Maturity_year:
+        if year < 2000.0:
+            year_ls.append(year + 100)
+        else:
+            year_ls.append(year)
+            
+    cleaned_df['Maturity_year'] = year_ls
+    
+    mat_ls = [dt.datetime(year = int(yr), month = int(mn), day = int(dy)) for yr, mn, dy in\
+              zip(cleaned_df.Maturity_year, cleaned_df.Maturity_month, cleaned_df.Maturity_day)]
+    cleaned_df.Maturity = mat_ls
+    cleaned_df["bond_terms"] = calterm(cleaned_df,'IssueDate', 'Maturity')
+    cleaned_df = cleaned_df[cleaned_df.bond_terms > 0]
+    
+    cleaned_df =  cleaned_df.drop(['DenominationsCurrency', 'Maturity_year', 'Maturity_month', 'Maturity_day'], axis = 1)
+    #clean issue type
+        
+    cleaned_df = cleaned_df[~cleaned_df.IssueType.isnull()]
+    issue_type_ls = [isType.replace('\r', '', 10) for isType in cleaned_df.IssueType] 
+    cleaned_df['IssueType'] = issue_type_ls
+
+    cleaned_df.to_csv("/Users/leicui/blackrock_data/cleaned.csv", index = False)
+    
     #split data to SSA and corporate bonds
     SSA_df = cleaned_df[cleaned_df['IssueType'] == 'AS']
     SSA_df.index = np.arange(len(SSA_df.Issue_month))
+   
+    
     corporate_ls = ['IG',  'EMIG', 'FC', 'HY', 'EM']
     corporate_df = cleaned_df[cleaned_df["IssueType"].isin(corporate_ls)]
     corporate_df.index = np.arange(len(corporate_df.Issue_month))
@@ -285,6 +334,19 @@ if __name__ == '__main__':
     corporate_df.to_csv("/Users/leicui/blackrock_data/corp.csv", index = False)
     
     
+
+
+if __name__ == '__main__':
+    
+    #only select data with foreign bond flag to be yes
+    #cleaned_df = pd.read_csv("/Users/leicui/blackrock_data/All cross-border & foreign flagged v_7 nation.csv", sep = ',', parse_dates = True, infer_datetime_format=True)    
+    
+    cleaningData("All cross-border & foreign flagged v_7 nation.csv")
+    
+    
+    
+    #test the function to draw the figures    
+    '''
     #number of issuance each year and total notional amount each year
     issueNum_SSA_df = issueNum_notional(SSA_df, "SSA","Issue_year", 'PrincipalAmount($ mil)')
     issueNum_corp_df = issueNum_notional(corporate_df, "corp", "Issue_year", 'PrincipalAmount($ mil)')
@@ -316,7 +378,7 @@ if __name__ == '__main__':
     #corporates or SSA in which country issue cross-border bonds most
     numIssueByYearPie(SSA_df, "Issue_year", 'Domicile', 5,"Issue_nation_SSA.jpg")
     numIssueByYearPie(corporate_df, "Issue_year", 'Domicile', 5, "Issue_nation_corp.jpg")
-    
+    '''
 
     
     
