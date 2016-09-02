@@ -21,9 +21,29 @@ def func(term, name):
 
 	df_concat.to_csv('All_Butterfly_Spreads_' + name + '.csv')
 
+
+def Set_Up_Regression_Vars(filename):
+	""" Separate dataframes for each individual currency.
+		Columns to access each regression variable:
+			'Butterfly 10y' --> (ex. df_butt_arr[0]['Butterfly 10y'])
+			'Curve 10y'
+			'Currency'
+	"""
+	df = pd.read_csv(filename)
+
+	curr_order_arr = []
+	df_butt_arr = []
+	grouped = df.groupby('Currency')
+	for name, group in grouped:
+		curr_order_arr.append(name)
+		df_butt_arr.append(group)		
+
 if __name__ == '__main__':
-	func('MS', 'monthly')	# MS = month start
-	func('AS', 'yearly')	# AS = year start
+	#func('MS', 'monthly')	# MS = month start
+	#func('AS', 'yearly')	# AS = year start
+
+	filename = 'All_Butterfly_Spreads_monthly.csv'
+	Set_Up_Regression_Vars(filename)
 
 
 '''
