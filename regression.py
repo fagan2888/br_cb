@@ -32,18 +32,40 @@ def Set_Up_Regression_Vars(filename):
 	df = pd.read_csv(filename)
 
 	curr_order_arr = []
-	df_butt_arr = []
+	df_regr_arr = []
 	grouped = df.groupby('Currency')
 	for name, group in grouped:
 		curr_order_arr.append(name)
-		df_butt_arr.append(group)		
+		df_regr_arr.append(group)	
+
+	return curr_order_arr, df_regr_arr	
+
+def Get_Regression_Vars(curr_order_arr, df_regr_arr):
+	df_10_yr_int_rate_dict = {}
+	df_10_yr_butt_rate_dict = {}
+	df_10_yr_curr_rate_dict = {}
+
+	for i in range(len(df_regr_arr)):
+		df_10_yr_int_rate_dict[curr_order_arr[i]] = df_regr_arr[i]['10Y']
+		df_10_yr_butt_rate_dict[curr_order_arr[i]] = df_regr_arr[i]['Butterfly 10y']
+		df_10_yr_curr_rate_dict[curr_order_arr[i]] = df_regr_arr[i]['Curve 10y']
+
+	return df_10_yr_int_rate_dict, df_10_yr_butt_rate_dict, df_10_yr_curr_rate_dict
 
 if __name__ == '__main__':
 	#func('MS', 'monthly')	# MS = month start
 	#func('AS', 'yearly')	# AS = year start
 
 	filename = 'All_Butterfly_Spreads_monthly.csv'
-	Set_Up_Regression_Vars(filename)
+	# curr order: ['AUD', 'CAD', 'EUR', 'GBP', 'JPY', 'SEK', 'USD']
+	curr_order_arr, df_regr_arr	= Set_Up_Regression_Vars(filename)
+
+	df_10_yr_int_rate_dict, df_10_yr_butt_rate_dict, df_10_yr_curr_rate_dict = \
+				Get_Regression_Vars(curr_order_arr, df_regr_arr)
+
+
+
+
 
 
 '''
