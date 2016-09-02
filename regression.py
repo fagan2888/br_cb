@@ -41,6 +41,14 @@ def Set_Up_Regression_Vars(filename):
 	return curr_order_arr, df_regr_arr	
 
 def Get_Regression_Vars(curr_order_arr, df_regr_arr):
+	"""
+		dictionaries for:
+			10 Year interest rate
+			butterfly spread
+			10 year curve rate
+		keys are currency abbreviations: ['AUD', 'CAD', 'EUR', 'GBP', 'JPY', 'SEK', 'USD']
+	"""
+
 	df_10_yr_int_rate_dict = {}
 	df_10_yr_butt_rate_dict = {}
 	df_10_yr_curr_rate_dict = {}
