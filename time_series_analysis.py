@@ -12,15 +12,24 @@ import numpy as np
 from pandas.stats.api import ols
 
 
-ROOT_DIR = '/Users/leicui/Dropbox (blackrock project)/blackrock project团队文件夹/'
+ROOT_DIR = '/Users/leicui/Dropbox (blackrock project)/blackrock project/'
 
-MARKET_DICT = {'AUD': 'Australia TS SSA.csv' , \
+SSA_DICT = {'AUD': 'Australia TS SSA.csv' , \
 			'CAD': 'Canada TS SSA.csv', \
 			'EUR': 'EURO TS SSA.csv',\
 			'GBP': 'UK TS SSA.csv', \
 			'JPY': 'Japanese TS SSA.csv',\
 			'SEK': 'Sweden TS SSA.csv',\
 			'USD': 'US TS SSA.csv'}
+  
+
+CORP_DICT = {'AUD': 'Australia TS Corp.csv' , \
+			'CAD': 'Canada TS Corp.csv', \
+			'EUR': 'EURO TS Corp.csv',\
+			'GBP': 'UK TS Corp.csv', \
+			'JPY': 'Japanese TS Corp.csv',\
+			'SEK': 'Sweden TS Corp.csv',\
+			'USD': 'US TS Corp.csv'}
 			
 CREDIT_DICT = {  'AUD': 'AUD Australia Corporate A+, A, A- Spread Curve monthly.csv' , \
 			'CAD': 'CAD Canada Corporate A+, A, A- Spread Curve monthly.csv', \
@@ -62,93 +71,15 @@ def add_value(target_df, data_df,  group_col, typ):
 	
 	
 
-def regression(Currency):
-	
-	reg_df = pd.read_csv(ROOT_DIR  + 'Notional Time Series/Corp/' + MARKET_DICT[Currency], parse_dates = True, infer_datetime_format=True)
-	reg_df.IssueDate = pd.to_datetime(reg_df.IssueDate, infer_datetime_format = True)
-	
-	#normalization
-	mean = np.mean(reg_df['PrincipalAmount($mil)'])
-	std = np.std(reg_df['PrincipalAmount($mil)'])
-
-	reg_df['normal_amount'] = (reg_df['PrincipalAmount($mil)'] - mean)/std		
-	cols = reg_df.columns.tolist()
-	cols = cols[-1:] + cols[:-1]
-	reg_df = reg_df[cols]	
-	
-	swap_df = pd.read_csv(ROOT_DIR + 'materials/BBG curves/Swap curves/Database Butterfly-Curve/All_Butterfly_Spreads_monthly.csv',  parse_dates = True, infer_datetime_format=True)
-	swap_df.Dates = pd.to_datetime(swap_df.Dates, infer_datetime_format = True)
-	swap_df.set_index('Dates', inplace = True)
-	
-	TargetSwap_df = swap_df[swap_df.Currency == Currency]
-	
-	reg_df = add_value(reg_df, TargetSwap_df[['10Y','Butterfly 10y', 'Curve 10y']], 'IssueDate', 'Nation')	
-	
-	
-	#basic regression
-	ncol = len(list(reg_df))
-	res1 = ols( y = reg_df['PrincipalAmount($mil)'], x = reg_df.ix[:, 5:(ncol - 2)])	
-	res1_norm = ols( y = reg_df['normal_amount'], x = reg_df.ix[:, 5:(ncol - 2)])	
-	
-	#regression include curves and butterfly
-	res2 = ols( y = reg_df['PrincipalAmount($mil)'], x = reg_df.ix[:, 5:])
-	res2_norm = ols( y = reg_df['normal_amount'], x = reg_df.ix[:, 5:])
-	
-	if Currency == 'USD':
-		return res1, res2, res1_norm, res2_norm, reg_df
-	
-	reg_df['Date'] = reg_df.index
-	
-	#USD swap rate, serves as benchmark to calcucalate interest rate level 
-	'''	
-	r0_df  = pd.read_csv(ROOT_DIR + 'materials/BBG curves/Swap curves/Monthly swap curves/USD Swaps Curve monthly.csv',  parse_dates = True, infer_datetime_format=True)
-	r0_df.Date = pd.to_datetime(r0_df.Date, infer_datetime_format = True)
-	r0_df.set_index('Date', inplace = True)
-	'''
-	'''
-	r1_df = pd.read_csv(ROOT_DIR + 'materials/BBG curves/Swap curves/Monthly swap curves/CAD Swaps Curve monthly.csv',  parse_dates = True, infer_datetime_format=True)
-	r1_df.Date = pd.to_datetime(r1_df.Date, infer_datetime_format = True)
-	r1_df.set_index('Date', inplace = True)
-	'''
-	r0_df = swap_df[swap_df.Currency == 'USD']
-	r1_df = swap_df[swap_df.Currency == Currency]
-	
-	r_level_sr = r1_df['10Y'] - r0_df['10Y']
-	r_level_sr.name = 'r_level'
-	
-	reg_df = add_value(reg_df, r_level_sr, 'Date', 'Nation')
-	
-	r_sr = reg_df['10Y']
-	del reg_df['10Y']
-	
-	res3 = ols( y = reg_df['PrincipalAmount($mil)'], x = reg_df.ix[:, 5:])
-	res3_norm = ols( y = reg_df['normal_amount'], x = reg_df.ix[:, 5:])
-	
-	reg_df['Date'] = reg_df.index
-	
-	#consider credit spread
-	credit_df = pd.read_csv(ROOT_DIR + 'materials/BBG curves/Monthly credit spread curves/' + CREDIT_DICT[Currency], parse_dates = True, infer_datetime_format=True )
-	credit_df.Date = pd.to_datetime(credit_df.Date, infer_datetime_format = True)
-	credit_df.set_index('Date', inplace = True)
-	credit_sr = credit_df['10Y']
-	credit_sr.name = 'credit_level'
-	
-	reg1_df = add_value(reg_df, credit_sr, 'Date', 'Nation')
-	
-	
-	res4 = ols( y = reg1_df['PrincipalAmount($mil)'], x = reg1_df.ix[:, 5:])	
-	res4_norm = ols( y = reg1_df['normal_amount'], x = reg1_df.ix[:, 5:])
-	
-	reg_df['10Y'] = r_sr
-	
-	
-	return res1, res2, res3, res4, res1_norm, res2_norm, res3_norm, res4_norm, reg_df
 
 
 def regression_data(Currency, typ):
- 
-    reg_df = pd.read_csv(ROOT_DIR  + 'cleaned data/Notional Time Series/' + typ +'/' + MARKET_DICT[Currency], parse_dates = True, infer_datetime_format=True)
-     
+    
+    if typ == 'Corp':
+        reg_df = pd.read_csv(ROOT_DIR  + 'cleaned data/Notional Time Series/' + typ +'/' + CORP_DICT[Currency], parse_dates = True, infer_datetime_format=True)
+    else:
+         reg_df = pd.read_csv(ROOT_DIR  + 'cleaned data/Notional Time Series/' + typ +'/' + SSA_DICT[Currency], parse_dates = True, infer_datetime_format=True)
+    
     reg_df = reg_df[['IssueDate','Currency','Nation','PrincipalAmount($mil)']]
     reg_df.IssueDate = pd.to_datetime(reg_df.IssueDate, infer_datetime_format = True)
     reg_df.set_index('IssueDate', inplace = True)
@@ -157,8 +88,8 @@ def regression_data(Currency, typ):
  
     reg_df = reg_df[reg_df.Nation.isin(nation_ls)]
     swap_df = pd.read_csv(ROOT_DIR + 'materials/BBG curves/Swap curves/Database Butterfly-Curve/All_Butterfly_Spreads_monthly.csv',  parse_dates = True, infer_datetime_format=True)
-    swap_df.Dates = pd.to_datetime(swap_df.Dates, infer_datetime_format = True)
-    swap_df.set_index('Dates', inplace = True)
+    swap_df.Date = pd.to_datetime(swap_df.Date, infer_datetime_format = True)
+    swap_df.set_index('Date', inplace = True)
     market_swap_df = swap_df[swap_df.Currency == Currency]
     
      
@@ -205,10 +136,12 @@ if __name__ == '__main__':
     writer.save()
     '''
     
-    for typ in ['SSA']:
+    for typ in ['Corp', 'SSA']:
         for Cur in Currency_ls:
-        
-            writer = pd.ExcelWriter(Cur + '_' + typ + '.xlsx', engine = 'xlsxwriter')
+            if typ == 'Corp':
+                writer = pd.ExcelWriter(ROOT_DIR + 'cleaned data/regression data/Corp/' + Cur + '_' + typ + '.xlsx', engine = 'xlsxwriter')
+            else:
+                writer = pd.ExcelWriter(ROOT_DIR + 'cleaned data/regression data/SSA/' + Cur + '_' + typ + '.xlsx', engine = 'xlsxwriter')
             df = regression_data(Cur, typ)
             
             df.to_excel(writer)

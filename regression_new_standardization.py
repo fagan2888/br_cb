@@ -1,3 +1,4 @@
+# coding=utf-8
 import pandas as pd
 import numpy as np
 from pandas.stats.api import ols
@@ -5,7 +6,7 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from statsmodels.stats import outliers_influence
 
-ROOT_DIR = '/Users/leicui/Dropbox (blackrock project)/blackrock project团队文件夹/'
+ROOT_DIR = '/Users/leicui/Dropbox (blackrock project)/blackrock project/'
 
 MARKET_DICT = {'AUD': 'Australia TS SSA.csv' , \
 			'CAD': 'Canada TS SSA.csv', \

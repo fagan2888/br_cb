@@ -19,7 +19,7 @@ plt.style.use("ggplot")
 FOREIGN_BOND_TYPE_CODE = ('AL', 'AR', 'BD', 'DA', 'DR', 'GA','KG', 'KA', 'MP', 'MA', 'MT', 'NA', 'RB', 'SA', 'SI', 'SO', 'YA')
 
 #change the root directory to your own
-ROOTDIR = "/Users/leicui/blackrock_data/figures/new/"
+ROOT_DIR = '/Users/leicui/Dropbox (blackrock project)/blackrock project团队文件夹/'
 
 
 #his_df = pd.read_excel("/Users/leicui/blackrock_data/bond issuance excluding domestic market.xlsx",\
@@ -29,46 +29,54 @@ ROOTDIR = "/Users/leicui/blackrock_data/figures/new/"
 #                            sheetname = "Request 3")
 
 #test_df = since16_df[since16_df['Bond\nType\nCode'].isin(FOREIGN_BOND_TYPE_CODE)]
- 
-"""
-['Unnamed:0',
- 'IssueDate',
- 'Name',
- 'BasisPointSpread',
- 'BenchmarkTreasury',
- 'BondTypeCode',
- 'BondType',
- 'BusinessDescription',
- 'Coupon(%)',
- 'DenominationsCurrency',
- 'DomicileNationCode',
- 'Exch-ange-ableCode',
- 'Exchange-ableType',
- 'FitchRating',
- 'ForeignIssueFlag(egYankee)(Y/N)',
- 'ISIN',
- 'Industry',
- 'IssueType',
- 'LiborSpread',
- 'Marketplace',
- 'Maturity',
- 'MoodyRating',
- 'Nation',
- 'Nation.1',
- 'OfferYieldtoMaturity(%)',
- 'PrincipalAmount($mil)',
- 'PrincipalAmt-inthisMkt(euromil)',
- 'PrincipalAmt-sumofallMkts($mil)',
- 'PrincipalAmt-sumofallMkts(euromil)',
- 'PrncplAmtinCurrofIss-inthisMkt(mil)',
- 'PrncplAmtw/CurrofIss-inthisMkt(mil)',
- 'PrncplAmtw/CurrofIss-sumofallMkts(mil)',
- 'SpreadtoBench-Mark',
- "Stan-dard&Poor'sRating",
- 'Domicile',
- 'Currency',
- 'CurrAbbrev']
-"""
+
+MARKET_DICT = {'AUD': 'Australia TS SSA.csv' , \
+			'CAD': 'Canada TS SSA.csv', \
+			'EUR': 'EURO TS SSA.csv',\
+			'GBP': 'UK TS SSA.csv', \
+			'JPY': 'Japanese TS SSA.csv',\
+			'SEK': 'Sweden TS SSA.csv',\
+			'USD': 'US TS SSA.csv'}
+			
+CREDIT_DICT = {  'AUD': 'AUD Australia Corporate A+, A, A- Spread Curve monthly.csv' , \
+			'CAD': 'CAD Canada Corporate A+, A, A- Spread Curve monthly.csv', \
+			'EUR': 'EUR Europe Corporate A+, A, A- Spread Curve monthly.csv',\
+			'JPY': 'JPY Japan Corporate A+, A, A- Spread Curve monthly.csv',\
+			'SEK': 'SEK Europe Corporate AA+ , AA , AA- Spread Curve monthly.csv',\
+			'USD': 'USD US Corporate A+, A, A- Spread Curve monthly.csv', \
+                 'NOK': 'NOK Europe Agency & Regionals Spread Curve monthly.csv',\
+                 'NZD': 'NZD New Zealand Financials AA+ , AA , AA- Spread Curve monthly.csv',\
+                 'GBP': 'GBP Europe Composite AA+ , AA , AA- Spread Curve monthly.csv'}
+   
+NATION_CURRENCY_DICT = {'Australia': 'AUD', \
+                        'United Kingdom': 'GBP', \
+                        'Sweden': 'SEK',  \
+                        'Canada': 'CAD', \
+                        'Norway': 'NOK', \
+                        'Japan': 'JPY', \
+                        'Eurozone': 'EUR', \
+                        'U.S.': 'USD', \
+                        'New Zealand': 'NZD'}
+
+
+def add_value(target_df, data_df,  group_col, typ):
+    df_ls = []
+    grouped = pd.groupby(target_df, group_col)
+	
+    for key, sub_df in grouped:
+        if typ == 'swap':
+            nation_swap = data_df[data_df.Currency == NATION_CURRENCY_DICT[key]]
+            df_ls.append(sub_df.join(nation_swap[['10Y', 'Butterfly 10y', 'Curve 10y']]))
+        elif typ == 'credit':
+            credit_df = pd.read_csv(ROOT_DIR + 'cleaned data/Monthly credit spread curves/' + CREDIT_DICT[NATION_CURRENCY_DICT[key]],parse_dates = True, infer_datetime_format=True )
+            credit_df.Date = pd.to_datetime(credit_df.Date, infer_datetime_format = True)
+            credit_df.set_index('Date', inplace = True)
+                
+            df_ls.append(sub_df.join(credit_df['10Y']))
+    return pd.concat(df_ls)
+	
+	
+
 
 def dateStamp2datetime(DateSeries):
     date_ls = []
@@ -118,7 +126,7 @@ def plotissueNum_notional(df, bar_cols, line_cols, filename):
     ax2.ticklabel_format(axis='y', style='sci', scilimits=(-2,2))
     
     fig = ax.get_figure()
-    fig.savefig(ROOTDIR + filename, format = "jpg", dpi = 150)
+    fig.savefig(ROOT_DIR + filename, format = "jpg", dpi = 150)
     fig.clear()
     
         
@@ -161,7 +169,7 @@ def notionalAmountByYearPlot(df, date_col, splitType, notionalType, filename, to
             height = rect.get_height()
             ax.text(rect.get_x() + rect.get_width()/2., height, '%d' % int(height),ha='center', va='bottom')
        
-    fig.savefig(ROOTDIR + filename, format = "jpg", dpi = 200)
+    fig.savefig(ROOT_DIR + filename, format = "jpg", dpi = 200)
     fig.clear()
         
 
@@ -195,7 +203,7 @@ def numIssueByYearBar(df, date_col, splitType, filename, top = None):
             height = rect.get_height()
             ax.text(rect.get_x() + rect.get_width()/2., height, '%d' % int(height),ha='center', va='bottom')
         
-    fig.savefig(ROOTDIR + filename, format = "jpg", dpi = 200)
+    fig.savefig(ROOT_DIR + filename, format = "jpg", dpi = 200)
     fig.clear()
     
 def numIssueByYearPie(df, date_col, splitType, top, filename, col = 3, row = 3):
@@ -212,7 +220,7 @@ def numIssueByYearPie(df, date_col, splitType, top, filename, col = 3, row = 3):
         ax.set_title("year " + str(k))
         i+=1
     
-    fig.savefig(ROOTDIR + filename, format = "jpg", dpi = 200)
+    fig.savefig(ROOT_DIR + filename, format = "jpg", dpi = 200)
     fig.clear()
     
     
@@ -254,7 +262,7 @@ def plotHistogram(df, date_col, class_col, filename, *argv):
         ax.set_title("year " + str(k))
         i += 1
             
-    fig.savefig(ROOTDIR + filename, format = "jpg", dpi = 200)
+    fig.savefig(ROOT_DIR + filename, format = "jpg", dpi = 200)
     fig.clear()
         
 def cleaningData(filename):
@@ -332,6 +340,41 @@ def cleaningData(filename):
     corporate_df.index = np.arange(len(corporate_df.Issue_month))
     SSA_df.to_csv("/Users/leicui/blackrock_data/SSA.csv", index = False)
     corporate_df.to_csv("/Users/leicui/blackrock_data/corp.csv", index = False)
+    
+ 
+    reg_df = pd.read_csv(ROOT_DIR  + 'cleaned data/Notional Time Series/' + typ +'/' + MARKET_DICT[Currency], parse_dates = True, infer_datetime_format=True)
+     
+    reg_df = reg_df[['IssueDate','Currency','Nation','PrincipalAmount($mil)']]
+    reg_df.IssueDate = pd.to_datetime(reg_df.IssueDate, infer_datetime_format = True)
+    reg_df.set_index('IssueDate', inplace = True)
+    #nation of interest 
+    nation_ls = ['Australia', 'United Kingdom', 'Sweden', 'Canada', 'Norway', 'Japan', 'Eurozone', 'U.S.', 'New Zealand']
+ 
+    reg_df = reg_df[reg_df.Nation.isin(nation_ls)]
+    swap_df = pd.read_csv(ROOT_DIR + 'materials/BBG curves/Swap curves/Database Butterfly-Curve/All_Butterfly_Spreads_monthly.csv',  parse_dates = True, infer_datetime_format=True)
+    swap_df.Dates = pd.to_datetime(swap_df.Dates, infer_datetime_format = True)
+    swap_df.set_index('Dates', inplace = True)
+    market_swap_df = swap_df[swap_df.Currency == Currency]
+    
+     
+    reg_df = reg_df.join(market_swap_df[['10Y', 'Butterfly 10y', 'Curve 10y']]) 
+    #rename colunms
+    reg_df.rename(columns = {'10Y': 'r_market', 'Butterfly 10y': 'Butterfly_market', 'Curve 10y': 'Curve_market'}, inplace = True)
+    #add interest rate level, butterfly rate, curve rate for domicile nation    
+    reg_df = add_value(reg_df, swap_df, 'Nation','swap')
+    reg_df.rename(columns = {'10Y': 'r_domicile', 'Butterfly 10y': 'Butterfly_domicile', 'Curve 10y': 'Curve_domicile'}, inplace = True)
+        
+    #add credit spread for market
+    credit_df = pd.read_csv(ROOT_DIR + 'cleaned data/Monthly credit spread curves/' + CREDIT_DICT[Currency],parse_dates = True, infer_datetime_format=True )
+    credit_df.Date = pd.to_datetime(credit_df.Date, infer_datetime_format = True)
+    credit_df.set_index('Date', inplace = True)
+    reg_df = reg_df.join(credit_df['10Y'])
+    reg_df.rename(columns = {'10Y': 'credit_market'}, inplace = True)
+    reg_df = add_value(reg_df, swap_df, 'Nation', 'credit')
+    
+    reg_df.rename(columns = {'10Y': 'credit_domicile'}, inplace = True)
+    
+    return reg_df
     
     
 
