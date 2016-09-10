@@ -14,56 +14,6 @@ def timing(f):
     return wrap
 
 @timing
-def main():
-	path = r'C:\Users\Alex\Desktop\\br_cb_Data\\'	# modify to own path for running
-	data_path = r'C:\Users\Alex\Desktop\\br_cb\Data\\'	# modify to own path for running
-	filename_data = 'Filtered with Nations 2007-2016.csv'
-	#filename_data = '2007-2016 DATA with ISIN sample.csv'
-	filename_domicile = 'domicile_dictionary.csv'
-	filename_euro_list = 'Euro_countries_list.csv'
-	filename_curr_codes = 'currency_codes_dict.csv'
-	filename_ratings = 'ratings_dict.csv'
-	rating_cols_df = ['FitchRating', 'MoodyRating', 'Stan-dard &Poor\'sRating']
-	rating_cols_dict = ['Fitch', 'Moody\'s', 'S&P']
-
-	df = pd.read_csv(path + filename_data, low_memory=False)
-
-	# remove all \r and \n from dataframe column names
-	df.columns = Remove_Chars_From_Cols(df.columns)
-
-	df = Clean_Time_Cols(df)
-
-	# Read dictionaries necessary to identify bonds by their characteristics
-	df_domicile = pd.read_csv(data_path + filename_domicile)
-	df_euro_list = pd.read_csv(data_path + filename_euro_list)
-	df_curr_codes = pd.read_csv(data_path + filename_curr_codes)
-	df_ratings_dict = pd.read_csv(data_path + filename_ratings)
-
-	# format curr, domicile, and rating columns based on external dicts above
-	df['Domicile'] = Convert_Dom_Codes(df, df_domicile)
-	curr_codes = Parse_Curr_Codes(df, df_curr_codes)
-	df['Currency'] = Get_Curr_Names(curr_codes, df_curr_codes, df_euro_list)
-	df.dropna(subset=['Currency'], inplace=True)	# removing any empty currencies
-	df = df[df['Currency'] != np.nan]				# removing any empty currencies
-	df['Overall Rating S&P'] = Average_Ratings(df, df_ratings_dict, rating_cols_df, rating_cols_dict)
-
-	df_cb_curr_dom = Compare_Curr_Dom(df, df_euro_list)
-	df_cb_dom_dom = Compare_Dom_Mktplc(df, df_euro_list)
-	df_cb_dom_dom = Remove_Curr_Filter_From_Mkt_Filter(df_cb_curr_dom, df_cb_dom_dom, df_euro_list)
-
-	df_cb_curr_nat = Compare_Curr_Nation(df, df_euro_list)
-	df_cb_dom_nat = Compare_Nation_Mktplc(df, df_euro_list)
-	df_cb_dom_nat = Remove_Curr_Filter_From_Mkt_Filter(df_cb_curr_nat, df_cb_dom_nat, df_euro_list)
-
-	outfile_dom = 'All cross-border & foreign flagged v_9 domicile.csv'
-	outfile_nation = 'All cross-border & foreign flagged v_9 nation.csv'
-	df_domicile = Flag_vs_Grouping(df, df_cb_curr_dom, df_cb_dom_dom, df_euro_list, outfile_dom)
-	df_nation = Flag_vs_Grouping(df, df_cb_curr_nat, df_cb_dom_nat, df_euro_list, outfile_nation)
-
-	df_nation_corp, df_nation_ssa = Filter_Out_SSA(df_nation)
-	df_domicile_corp, df_domicile_ssa = Filter_Out_SSA(df_domicile)
-
-@timing
 def Remove_Chars_From_Cols(cols):
 	cols = [x.replace('\r', '') for x in cols]
 	cols = [x.replace('\n', '') for x in cols]
@@ -479,10 +429,6 @@ def	Filter_Out_SSA(df):
 	print ('Number of SSA bonds: ', SSA_df.shape[0])
 
 	return SSA_df, corporate_df
-
-if __name__ == '__main__':
-	main()
-
 
 
 
