@@ -341,40 +341,8 @@ def cleaningData(filename):
     SSA_df.to_csv("/Users/leicui/blackrock_data/SSA.csv", index = False)
     corporate_df.to_csv("/Users/leicui/blackrock_data/corp.csv", index = False)
     
- 
-    reg_df = pd.read_csv(ROOT_DIR  + 'cleaned data/Notional Time Series/' + typ +'/' + MARKET_DICT[Currency], parse_dates = True, infer_datetime_format=True)
-     
-    reg_df = reg_df[['IssueDate','Currency','Nation','PrincipalAmount($mil)']]
-    reg_df.IssueDate = pd.to_datetime(reg_df.IssueDate, infer_datetime_format = True)
-    reg_df.set_index('IssueDate', inplace = True)
-    #nation of interest 
-    nation_ls = ['Australia', 'United Kingdom', 'Sweden', 'Canada', 'Norway', 'Japan', 'Eurozone', 'U.S.', 'New Zealand']
- 
-    reg_df = reg_df[reg_df.Nation.isin(nation_ls)]
-    swap_df = pd.read_csv(ROOT_DIR + 'materials/BBG curves/Swap curves/Database Butterfly-Curve/All_Butterfly_Spreads_monthly.csv',  parse_dates = True, infer_datetime_format=True)
-    swap_df.Dates = pd.to_datetime(swap_df.Dates, infer_datetime_format = True)
-    swap_df.set_index('Dates', inplace = True)
-    market_swap_df = swap_df[swap_df.Currency == Currency]
     
-     
-    reg_df = reg_df.join(market_swap_df[['10Y', 'Butterfly 10y', 'Curve 10y']]) 
-    #rename colunms
-    reg_df.rename(columns = {'10Y': 'r_market', 'Butterfly 10y': 'Butterfly_market', 'Curve 10y': 'Curve_market'}, inplace = True)
-    #add interest rate level, butterfly rate, curve rate for domicile nation    
-    reg_df = add_value(reg_df, swap_df, 'Nation','swap')
-    reg_df.rename(columns = {'10Y': 'r_domicile', 'Butterfly 10y': 'Butterfly_domicile', 'Curve 10y': 'Curve_domicile'}, inplace = True)
-        
-    #add credit spread for market
-    credit_df = pd.read_csv(ROOT_DIR + 'cleaned data/Monthly credit spread curves/' + CREDIT_DICT[Currency],parse_dates = True, infer_datetime_format=True )
-    credit_df.Date = pd.to_datetime(credit_df.Date, infer_datetime_format = True)
-    credit_df.set_index('Date', inplace = True)
-    reg_df = reg_df.join(credit_df['10Y'])
-    reg_df.rename(columns = {'10Y': 'credit_market'}, inplace = True)
-    reg_df = add_value(reg_df, swap_df, 'Nation', 'credit')
-    
-    reg_df.rename(columns = {'10Y': 'credit_domicile'}, inplace = True)
-    
-    return reg_df
+    return cleaned_df
     
     
 
