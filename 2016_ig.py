@@ -3,38 +3,43 @@ import numpy as np
 from dateutil import relativedelta as rdelta
 pd.options.mode.chained_assignment = None  # default='warn'
 import time
+import datetime
 
 def timing(f):
     def wrap(*args):
         time1 = time.time()
         ret = f(*args)
         time2 = time.time()
-        print '%s function took %0.3f s' % (f.func_name, (time2-time1)*1.0)
+        print ('%s function took %0.3f s' % (f.__name__, (time2-time1)*1.0))
         return ret
     return wrap
 
 @timing
 def main():
-	path = '/Users/leicui/br_cb/data/'	# modify to own path for running
-	data_path = '/Users/leicui/br_cb/data/'	# modify to own path for running
-	filename1 = '2007-2016 DATA with ISIN and FX.csv'
+	path = r'C:\Users\Alex\Desktop\\br_cb_Data\\'	# modify to own path for running
+	data_path = r'C:\Users\Alex\Desktop\\br_cb\Data\\'	# modify to own path for running
+	#filename1 = '2007-2016 DATA with ISIN.csv'
+	filename1 = 'Filtered with Nations 2007-2016.csv'	
 	filename2 = 'domicile_dictionary.csv'
 	filename3 = 'Euro_countries_list.csv'
-<<<<<<< HEAD
-	filename4 = 'currency codes.csv'
-=======
 	filename4 = 'currency codes_mod.csv'
 	filename5 = 'currency_codes_dict.csv'
 	filename6 = 'ratings_dict.csv'
-	rating_cols_df = ['Fitch\r\nRating', 'Moody\r\nRating', 'Stan-\r\ndard\r\n &\r\nPoor\'s\r\nRating']
+	rating_cols_df = ['FitchRating', 'MoodyRating', 'Stan-dard &Poor\'sRating']
 	rating_cols_dict = ['Fitch', 'Moody\'s', 'S&P']
->>>>>>> fa8032ee6c0a6ceac4681b7d9e4c21d0fc66e7ba
 
 	df = pd.read_csv(path + filename1, low_memory=False)
-	#print df.columns
+
+	# remove all \r and \n from dataframe column names
+	cols = df.columns
+	cols = [x.replace('\r', '') for x in cols]
+	cols = [x.replace('\n', '') for x in cols]
+	df.columns = cols
 
 	#print df.columns.values
 	df = Clean_Data(df)
+	df.to_csv('cols.csv')
+	return
 
 	df_domicile = pd.read_csv(data_path + filename2)
 	df_euro_list = pd.read_csv(data_path + filename3)
@@ -50,7 +55,7 @@ def main():
 	df['Currency'] = Get_Curr_Names(curr_codes, df_curr_codes, df_euro_list)
 	df.dropna(subset=['Currency'], inplace=True)	# removing any empty currencies
 	df = df[df['Currency'] != 'nan']				# removing any empty currencies
-	#df['Overall Rating S&P'] = Average_Ratings(df, df_ratings_dict, rating_cols_df, rating_cols_dict)
+	df['Overall Rating S&P'] = Average_Ratings(df, df_ratings_dict, rating_cols_df, rating_cols_dict)
 
 	df_cb_curr_dom = Compare_Curr_Dom(df, df_euro_list)
 	df_cb_dom_dom = Compare_Dom_Mktplc(df, df_euro_list)
@@ -61,15 +66,15 @@ def main():
 	df_cb_dom_nat = Remove_Curr_Filter_From_Mkt_Filter(df_cb_curr_nat, df_cb_dom_nat, df_euro_list)
 	#df_cb_glob = Add_Global_Bonds(df_cb, df)
 
-	outfile_dom = 'All cross-border & foreign flagged v_2 domicile.csv'
-	outfile_nation = 'All cross-border & foreign flagged v_2 nation.csv'
+	outfile_dom = 'All cross-border & foreign flagged v_6 domicile.csv'
+	outfile_nation = 'All cross-border & foreign flagged v_6 nation.csv'
 	Flag_vs_Grouping(df, df_cb_curr_dom, df_cb_dom_dom, df_euro_list, outfile_dom)
 	Flag_vs_Grouping(df, df_cb_curr_nat, df_cb_dom_nat, df_euro_list, outfile_nation)
 
 @timing
 def Clean_Data(cleaned_df):
-	iss_date_col = "Issue\r\nDate"
-	iss_type_col = "Issue\r\nType"
+	iss_date_col = "IssueDate"
+	iss_type_col = "IssueType"
 	cleaned_df[iss_date_col] = pd.to_datetime(cleaned_df[iss_date_col], infer_datetime_format = True)
 	cleaned_df[iss_date_col] = dateStamp2datetime(cleaned_df[iss_date_col])
 	cleaned_df = cleaned_df[cleaned_df.Maturity != "2013-30"]
@@ -80,12 +85,17 @@ def Clean_Data(cleaned_df):
 	temp1_df["Maturity"] = pd.to_datetime(temp1_df["Maturity"], infer_datetime_format=True, errors='coerce')
 	temp1_df["Maturity"] = dateStamp2datetime(temp1_df["Maturity"])
 	cleaned_df = temp1_df.append(temp2_df, ignore_index = True)
+	cleaned_df = cleaned_df[~cleaned_df['Maturity'].isnull()]	#remove NaT datetime objects
+
+	cleaned_df = Fix_Maturities(cleaned_df)	# Converts all years from 1900's to 2000's
 
 	#cleaned_df["PrincipalAmountIn Currency(mil)"] = [float(notional) for notional in cleaned_df["PrincipalAmountIn Currency(mil)"]]
 
 	cleaned_df["Issue_year"] = cleaned_df[iss_date_col].dt.year
 	cleaned_df["Issue_month"] = cleaned_df[iss_date_col].dt.month
 	cleaned_df["bond_terms"] = calterm(cleaned_df, iss_date_col, 'Maturity')
+
+	cleaned_df = cleaned_df[cleaned_df['bond_terms'] > 0]
 
 	return cleaned_df
 
@@ -97,6 +107,21 @@ def Clean_Data(cleaned_df):
 	corporate_df.index = np.arange(len(corporate_df.Issue_month))
 	SSA_df.to_csv("/Users/leicui/blackrock_data/SSA.csv", index = False)
 	corporate_df.to_csv("/Users/leicui/blackrock_data/corp.csv", index = False)
+
+@timing
+def Fix_Maturities(df):
+	"""
+		Converts all maturities with years in the 1900's to 2000's. 
+		Takes year modulus 100 and adds 2000 to it. For example, 
+		1976 % 100 = 76. 76 + 2000 + 2076. 2076 is new year.
+	"""
+	for i in range(df.shape[0]):
+		new_date = pd.Timestamp(df['Maturity'].values[i]).to_pydatetime()
+		if new_date.year < 2000:			
+			new_date = new_date.replace(year = (new_date.year % 100) + 2000)
+			df['Maturity'].values[i] = np.datetime64(new_date)
+
+	return df
 
 @timing
 def dateStamp2datetime(DateSeries):
@@ -138,7 +163,7 @@ def calterm(df, issue_date, maturity_date):
 def Merge_Dfs(data_filenames, path):
 	frames = []
 	for file in data_filenames:
-		df = pd.read_csv(path + file, index_col='Issue\nDate', #usecols=use_cols,
+		df = pd.read_csv(path + file, index_col='IssueDate', #usecols=use_cols,
 					parse_dates=True, infer_datetime_format=True, na_values=np.nan,
 					low_memory=False)
 		frames.append(df)
@@ -181,7 +206,7 @@ def Get_Curr_Names(curr_codes, df_curr_codes, df_euro_list):
 				else:
 					curr_name_arr.append(curr_name)
 			except:
-				print '--' + str(code) + '---'
+				#print '--' + str(code) + '---'
 				miss_code.append(code)
 				pass
 
@@ -202,7 +227,7 @@ def Parse_Curr_Codes(df, df_curr_codes):
 	dict_curr_codes = df_curr_codes.set_index('Code')['Country'].to_dict()
 
 	# format: [<prinicipal dollar amount i.e. (100.00)> <country code i.e. (BA)]
-	princ_col = 'Prncpl Amt \r\nw/Curr of \r\nIss - in this\r\nMkt (mil)'
+	princ_col = 'Prncpl Amt w/Curr of Iss - in thisMkt (mil)'
 	curr_princ_arr = df[princ_col].values
 
 	curr_code_arr = []
@@ -228,7 +253,7 @@ def Convert_Dom_Codes(df, df_domicile):
 		Convert Domicile Nation Code to the actual country name using df_domicile as dictionary.
 	"""
 	dict_domicile = df_domicile.set_index('abbreviation')['name'].to_dict()
-	domicile_col = 'Domicile\r\nNation\r\nCode'
+	domicile_col = 'DomicileNationCode'
 
 	dom_code_arr = df[domicile_col]
 	dom_name_arr = []
@@ -416,8 +441,8 @@ def Domestic_Filter_not_Curr_Filter(df_cb_curr, df_cb_dom, df_euro_list):
 		the domestic currency filter. Special case if currency is EURO. Then if country in the 
 		euro as well include it as well in the difference between filters.
 	"""
-	df_cb_curr_no = df_cb_curr[df_cb_curr['Foreign Issue Flag\r\n(eg Yankee)\r\n(Y/N)'] != 'Yes']
-	df_cb_dom_no = df_cb_dom[df_cb_dom['Foreign Issue Flag\r\n(eg Yankee)\r\n(Y/N)'] != 'Yes']
+	df_cb_curr_no = df_cb_curr[df_cb_curr['Foreign Issue Flag(eg Yankee)(Y/N)'] != 'Yes']
+	df_cb_dom_no = df_cb_dom[df_cb_dom['Foreign Issue Flag(eg Yankee)(Y/N)'] != 'Yes']
 
 	arr = []
 	for index, row in df_cb_dom_no.iterrows():
@@ -434,10 +459,8 @@ def Remove_Curr_Filter_From_Mkt_Filter(df_cb_curr, df_cb_dom, df_euro_list):
 		the domestic currency filter and remove from those classified by marketplace filter. 
 		Special case if currency is EURO. Then if country in the euro as well remove it as well.
 	"""
-	df_cb_curr_no = df_cb_curr[df_cb_curr['Foreign Issue Flag\r\n(eg Yankee)\r\n(Y/N)'] != 'Yes']
-	df_cb_dom_no = df_cb_dom[df_cb_dom['Foreign Issue Flag\r\n(eg Yankee)\r\n(Y/N)'] != 'Yes']
-
-	print len(df_cb_curr_no)
+	df_cb_curr_no = df_cb_curr[df_cb_curr['Foreign Issue Flag(eg Yankee)(Y/N)'] != 'Yes']
+	df_cb_dom_no = df_cb_dom[df_cb_dom['Foreign Issue Flag(eg Yankee)(Y/N)'] != 'Yes']
 
 	arr = []
 	counter = 0
@@ -448,35 +471,27 @@ def Remove_Curr_Filter_From_Mkt_Filter(df_cb_curr, df_cb_dom, df_euro_list):
 		(row['Currency'] == 'EURO' and row['Domicile'] in df_euro_list['Country'].values):
 			df_cb_dom_no.drop(index, inplace=True)
 
-	print len(df_cb_curr_no)
-
 	return df_cb_dom_no
 
 @timing
 def Flag_vs_Grouping(df_orig, df_cb_curr, df_cb_dom, df_euro_list, outfile):
-	df_for = df_orig[df_orig['Foreign Issue Flag\r\n(eg Yankee)\r\n(Y/N)'] == 'Yes']
-	df_cb_curr_no = df_cb_curr[df_cb_curr['Foreign Issue Flag\r\n(eg Yankee)\r\n(Y/N)'] != 'Yes']
-	df_cb_dom_no = df_cb_dom[df_cb_dom['Foreign Issue Flag\r\n(eg Yankee)\r\n(Y/N)'] != 'Yes']
+	for_flag_col = 'Foreign Issue Flag(eg Yankee)(Y/N)'
+	df_for = df_orig[df_orig[for_flag_col] == 'Yes']
+	df_cb_curr_no = df_cb_curr[df_cb_curr[for_flag_col] != 'Yes']
+	df_cb_dom_no = df_cb_dom[df_cb_dom[for_flag_col] != 'Yes']
 
 	df_merge = df_cb_curr_no.merge(df_cb_dom_no, how='outer')
 	df_concat = pd.concat([df_merge, df_for])
-	df_concat.set_index('Issue\r\nDate', inplace=True)
+	df_concat.set_index('IssueDate', inplace=True)
 	df_concat.sort_index(inplace=True)
 
-<<<<<<< HEAD
-	print ('Number of foreign flagged bonds: ', df_for.shape[0])
-	print ('Number of cross-border currency without foreign flag: ', df_cb_curr_no.shape[0])
-	print ('Number of cross-border dominicile without foreign flag: ', df_cb_dom_no.shape[0])
-	print ('Total number of cross-border bonds with all filters:', df_concat.shape[0])
-=======
 	df_cb_dom_no.reset_index(drop=True, inplace=True)
 	df_cb_curr_no.reset_index(drop=True, inplace=True)
 
-	print 'Number of foreign flagged bonds: ', df_for.shape[0]
-	print 'Number of cross-border currency without foreign flag: ', df_cb_curr_no.shape[0]
-	print 'Number of cross-border domicile/nation without foreign flag: ', df_cb_dom_no.shape[0]
-	print 'Total number of cross-border bonds with all filters:', df_concat.shape[0]
->>>>>>> fa8032ee6c0a6ceac4681b7d9e4c21d0fc66e7ba
+	print ('Number of foreign flagged bonds: ', df_for.shape[0])
+	print ('Number of cross-border currency without foreign flag: ', df_cb_curr_no.shape[0])
+	print ('Number of cross-border marketplace without foreign flag: ', df_cb_dom_no.shape[0])
+	print ('Total number of cross-border bonds with all filters:', df_concat.shape[0])
 
 	df_concat.to_csv(outfile)
 
