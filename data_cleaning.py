@@ -1,7 +1,6 @@
 import pandas as pd 
 import numpy as np
 from dateutil import relativedelta as rdelta
-pd.options.mode.chained_assignment = None  # default='warn'
 import time
 import datetime
 
@@ -18,8 +17,8 @@ def timing(f):
 def main():
 	path = r'C:\Users\Alex\Desktop\\br_cb_Data\\'	# modify to own path for running
 	data_path = r'C:\Users\Alex\Desktop\\br_cb\Data\\'	# modify to own path for running
-	#filename_data = 'Filtered with Nations 2007-2016 sample.csv'
-	filename_data = '2007-2016 DATA with ISIN sample.csv'
+	filename_data = 'Filtered with Nations 2007-2016.csv'
+	#filename_data = '2007-2016 DATA with ISIN sample.csv'
 	filename_domicile = 'domicile_dictionary.csv'
 	filename_euro_list = 'Euro_countries_list.csv'
 	filename_curr_codes = 'currency_codes_dict.csv'
@@ -28,7 +27,6 @@ def main():
 	rating_cols_dict = ['Fitch', 'Moody\'s', 'S&P']
 
 	df = pd.read_csv(path + filename_data, low_memory=False)
-
 
 	# remove all \r and \n from dataframe column names
 	df.columns = Remove_Chars_From_Cols(df.columns)
@@ -56,12 +54,14 @@ def main():
 	df_cb_curr_nat = Compare_Curr_Nation(df, df_euro_list)
 	df_cb_dom_nat = Compare_Nation_Mktplc(df, df_euro_list)
 	df_cb_dom_nat = Remove_Curr_Filter_From_Mkt_Filter(df_cb_curr_nat, df_cb_dom_nat, df_euro_list)
-	#df_cb_glob = Add_Global_Bonds(df_cb, df)
 
-	outfile_dom = 'All cross-border & foreign flagged v_6 domicile.csv'
-	outfile_nation = 'All cross-border & foreign flagged v_6 nation.csv'
-	Flag_vs_Grouping(df, df_cb_curr_dom, df_cb_dom_dom, df_euro_list, outfile_dom)
-	Flag_vs_Grouping(df, df_cb_curr_nat, df_cb_dom_nat, df_euro_list, outfile_nation)
+	outfile_dom = 'All cross-border & foreign flagged v_9 domicile.csv'
+	outfile_nation = 'All cross-border & foreign flagged v_9 nation.csv'
+	df_domicile = Flag_vs_Grouping(df, df_cb_curr_dom, df_cb_dom_dom, df_euro_list, outfile_dom)
+	df_nation = Flag_vs_Grouping(df, df_cb_curr_nat, df_cb_dom_nat, df_euro_list, outfile_nation)
+
+	df_nation_corp, df_nation_ssa = Filter_Out_SSA(df_nation)
+	df_domicile_corp, df_domicile_ssa = Filter_Out_SSA(df_domicile)
 
 @timing
 def Remove_Chars_From_Cols(cols):
@@ -98,15 +98,6 @@ def Clean_Time_Cols(df):
 	df = df[df['bond_terms'] > 0]
 
 	return df
-
-	#split data to SSA and corporate bonds
-	SSA_df = df[df['IssueType'] == 'AS']
-	SSA_df.index = np.arange(len(SSA_df.Issue_month))
-	corporate_ls = ['IG',  'EMIG', 'FC', 'HY', 'EM']
-	corporate_df = df[df["IssueType"].isin(corporate_ls)]
-	corporate_df.index = np.arange(len(corporate_df.Issue_month))
-	SSA_df.to_csv("/Users/leicui/blackrock_data/SSA.csv", index = False)
-	corporate_df.to_csv("/Users/leicui/blackrock_data/corp.csv", index = False)
 
 @timing
 def Fix_Maturities(df):
@@ -319,15 +310,19 @@ def Compare_Curr_Nation(df, df_euro_list):
 
 	cb_arr = []
 
+	df['Currency'] = [item.lower() for item in df['Currency']]
+	df['Nation'] = [item.lower() for item in df['Nation']]
+	df['Nation.1'] = [str(item).lower() for item in df['Nation.1']]
+
 	for index, row in df.iterrows():
-		if 	((row['Currency'].lower() != row['Nation'].lower()) and (row['Currency'].lower() != row['Nation.1'].lower()) and \
+		if 	((row['Currency'] != row['Nation']) and (row['Currency'] != row['Nation.1']) and \
 			\
 			((row['Nation'] in df_euro_list['Country'].values and \
-			 row['Currency'].lower() != 'euro')  or \
+			 row['Currency'] != 'euro')  or \
 			\
 			(row['Nation'] not in df_euro_list['Country'].values))) and \
 			\
-			(row['Currency'].replace('.', '').lower() != row['Nation'].replace('.', '').lower()) \
+			(row['Currency'].replace('.', '') != row['Nation'].replace('.', '')) \
 			and (row['Currency'] != 'nan'):
 
 		   	#print row['Currency'].lower(), ':', row['Domicile'].lower()
@@ -463,7 +458,27 @@ def Flag_vs_Grouping(df_orig, df_cb_curr, df_cb_dom, df_euro_list, outfile):
 	print ('Number of cross-border marketplace without foreign flag: ', df_cb_dom_no.shape[0])
 	print ('Total number of cross-border bonds with all filters:', df_concat.shape[0])
 
-	df_concat.to_csv(outfile)
+	df_concat.to_csv(outfile, index=False)
+
+	return df_concat
+
+def	Filter_Out_SSA(df):
+	"""
+		Split data to SSA and corporate bonds.
+		Return split SSA and corporate dataframes.
+	"""
+	SSA_df = df[df['IssueType'] == 'AS']
+	SSA_df.index = np.arange(len(SSA_df.Issue_month))
+	corporate_ls = ['IG',  'EMIG', 'FC', 'HY', 'EM']
+	corporate_df = df[df["IssueType"].isin(corporate_ls)]
+	corporate_df.index = np.arange(len(corporate_df.Issue_month))
+	SSA_df.to_csv("SSA.csv", index = False)
+	corporate_df.to_csv("corp.csv", index = False)
+
+	print ('Number of corp bonds: ', corporate_df.shape[0])
+	print ('Number of SSA bonds: ', SSA_df.shape[0])
+
+	return SSA_df, corporate_df
 
 if __name__ == '__main__':
 	main()
