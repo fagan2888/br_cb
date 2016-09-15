@@ -141,6 +141,8 @@ def Parse_Curr_Codes(df, df_curr_codes):
 	princ_col = 'Prncpl Amt w/Curr of Iss - in thisMkt (mil)'
 	curr_princ_arr = df[princ_col].values
 
+	curr_princ_arr = [str(x) for x in curr_princ_arr]
+
 	curr_code_arr = []
 
 	split_arr = np.array([str.split(x) for x in curr_princ_arr])
@@ -227,30 +229,6 @@ def Average_Ratings(df, df_ratings_dict, rating_cols_df, rating_cols_dict):
 	return average_rating_SnP
 
 @timing
-def Compare_Curr_Dom(df, df_euro_list):
-	"""
-		Compare issuance currency and marketplace. If they are different then add bond to 
-		cb_arr. Speical case if bond is part of European Union, then check if the marketplace 
-		isn't the EURO. 
-	"""
-
-	cb_arr = []
-
-	for index, row in df.iterrows():
-		if 	(row['Currency'].lower() != row['Domicile'].lower() and \
-			((row['Domicile'] in df_euro_list['Country'].values and \
-			 row['Currency'].lower() != 'euro') or \
-			\
-			(row['Domicile'] not in df_euro_list['Country'].values))) and \
-			\
-			(row['Currency'].replace('.', '').lower() != row['Domicile'].replace('.', '').lower()) \
-			and (row['Currency'] != 'nan'):
-
-		   	cb_arr.append(row)
-
-	return pd.DataFrame(cb_arr)
-
-@timing
 def Compare_Curr_Nation(df, df_euro_list):
 	"""
 		Compare issuance currency and marketplace. If they are different then add bond to 
@@ -260,8 +238,8 @@ def Compare_Curr_Nation(df, df_euro_list):
 
 	cb_arr = []
 
-	df['Currency'] = [item.lower() for item in df['Currency']]
-	df['Nation'] = [item.lower() for item in df['Nation']]
+	df['Currency'] = [str(item).lower() for item in df['Currency']]
+	df['Nation'] = [str(item).lower() for item in df['Nation']]
 	df['Nation.1'] = [str(item).lower() for item in df['Nation.1']]
 
 	for index, row in df.iterrows():
@@ -277,33 +255,6 @@ def Compare_Curr_Nation(df, df_euro_list):
 
 		   	#print row['Currency'].lower(), ':', row['Domicile'].lower()
 		   	cb_arr.append(row)
-
-	return pd.DataFrame(cb_arr)
-
-@timing
-def Compare_Dom_Mktplc(df, df_euro):
-	"""
-		Compare country of domicile and marketplace. If they are different then add bond to 
-		cb_arr. Speical case if bond is part of European Union, then check if the marketplace 
-		isn't the EURO. 
-	"""
-	cb_arr = []	#cross_border array
-
-	for index, row in df.iterrows():
-		# if domicile and marketplace don't match
-		# if they don't match, then if country is part of EU and marketplace isn't EU
-		# if they are nan, don't consider them
-		if 	(row["Domicile"] not in row["Marketplace"] and \
-			((row['Domicile'] in df_euro['Country'].values and \
-		   		'euro' not in row['Marketplace'].lower()) or \
-			\
-		   	(row['Domicile'] not in df_euro['Country'].values))) and \
-			\
-			(row['Domicile'].replace('.', '').lower() not in \
-				row['Marketplace'].replace('.', '').lower()) \
-		    and	(row['Domicile'] != np.nan):
-		   	#print row['Domicile'], ':', row['Marketplace']
-			cb_arr.append(row)
 
 	return pd.DataFrame(cb_arr)
 
@@ -348,24 +299,6 @@ def Add_Global_Bonds(df_cb, df):
 	df_merged = df_cb.merge(df_global, how="outer")
 
 	return df_merged
-
-@timing
-def Domestic_Filter_not_Curr_Filter(df_cb_curr, df_cb_dom, df_euro_list):
-	"""
-		Gets the bonds classified by the domestic, marketplace filter and not classified by
-		the domestic currency filter. Special case if currency is EURO. Then if country in the 
-		euro as well include it as well in the difference between filters.
-	"""
-	df_cb_curr_no = df_cb_curr[df_cb_curr['Foreign Issue Flag(eg Yankee)(Y/N)'] != 'Yes']
-	df_cb_dom_no = df_cb_dom[df_cb_dom['Foreign Issue Flag(eg Yankee)(Y/N)'] != 'Yes']
-
-	arr = []
-	for index, row in df_cb_dom_no.iterrows():
-		if (row['Currency'] == row['Domicile']) or \
-		(row['Currency'] == 'EURO' and row['Domicile'] in df_euro_list['Country'].values):
-			arr.append(row)
-
-	df = pd.DataFrame(arr)
 
 @timing
 def Remove_Curr_Filter_From_Mkt_Filter(df_cb_curr, df_cb_dom, df_euro_list):
