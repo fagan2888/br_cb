@@ -122,7 +122,7 @@ Malta,Lira,ML
 Malta,Pound,MTP
 Mauritian,Ouguiya,MR
 Mauritius,Rupee,MUR
-Mexica,Peso,MP
+Mexico,Peso,MP
 Moldovan,Leu,MDL
 Monaco,Franc,MNF
 Mongolia,Tugrik,MT
@@ -140,7 +140,7 @@ Nigeria,Kobo,NKB
 Nigeria,naira,NIN
 None,None,NON
 North Korea,Won,KPW
-Norwegia,Krone,NKR
+Norway,Krone,NKR
 Omani,Riyal,OMR
 Pakistan,Rupee,PR
 Panama,Balboa,PB
@@ -148,7 +148,7 @@ Papua N. Guinea,Kina,PGK
 Paraguay,Guarani,PGG
 Peru,Inti,PI
 Peru,Sol,PS
-Philippine,Peso,PP
+Philippines,Peso,PP
 Poland,Zloty,PZ
 Portugual,Escudo,ESC
 Qatar,Dinar,QAT
@@ -187,7 +187,7 @@ Switzerland,Franc,SFR
 Syrian,pound,SYP
 Taiwan,Dollar,TW
 Tanzania,Shilling,TS
-Thai,Baht,BA
+Thailand,Baht,BA
 Tonga,Pa'anga,TOP
 Trin. & Tobago,Dlr,TTD
 Tunisia,Dinar,TD
@@ -197,8 +197,8 @@ US,Dollar,US
 Uganda,Shilling,UGS
 Ukrain,Hryvna,UKH
 Ukrain,Karbovanet,UKB
-Unidad De Fomento,Ch,UF
-Unidad De,Inversion,UDI
+Chile,Ch,UF
+Chile,Inversion,UDI
 Unknown,alpha_code,UNK
 Uruguay,Peso,UP
 Arab Em.,Dirham,UAD
