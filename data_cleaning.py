@@ -357,7 +357,7 @@ def Remove_Curr_Filter_From_Mkt_Filter(df_cb_mkt, df_euro_list):
     return pd.DataFrame(df_cb_final)
 
 @timing
-def Flag_vs_Grouping(df_orig, df_cb_curr, df_cb_dom, df_euro_list, outfile):
+def Flag_vs_Grouping(df_orig, df_cb_curr, df_cb_dom, df_euro_list, outfile, path):
     for_flag_col = 'Foreign Issue Flag(eg Yankee)(Y/N)'
     df_for = df_orig[df_orig[for_flag_col] == 'Yes']
     df_cb_curr_no = df_cb_curr[df_cb_curr[for_flag_col] != 'Yes']
@@ -368,7 +368,7 @@ def Flag_vs_Grouping(df_orig, df_cb_curr, df_cb_dom, df_euro_list, outfile):
     df_concat.set_index('IssueDate', inplace=True)
     df_concat.sort_index(inplace=True)
     df_concat.reset_index(inplace = True)
-    df_concat.drop('Unnamed: 0', inplace=True)  # unneeded column added by concat
+    #df_concat.drop('Unnamed: 0', inplace=True)  # unneeded column added by concat
     
 
     print ('Number of foreign flagged bonds: ', df_for.shape[0])
@@ -376,7 +376,7 @@ def Flag_vs_Grouping(df_orig, df_cb_curr, df_cb_dom, df_euro_list, outfile):
     print ('Number of cross-border marketplace without foreign flag: ', df_cb_dom_no.shape[0])
     print ('Total number of cross-border bonds with all filters:', df_concat.shape[0])
 
-    df_concat.to_csv(outfile, index=False)
+    df_concat.to_csv(path + outfile, index=False)
 
     return df_concat
 
@@ -423,7 +423,8 @@ def generate_notional_ts(data,isCorp):
     useful_dat.set_index('IssueDate',inplace=True)
     ts_notional=pd.DataFrame()
     for keys, df in useful_dat.groupby(['Currency','Nation']):
-        ts_notional=pd.concat([ts_notional,df.resample("MS", how={'Currency':min,'Nation':min,'PrincipalAmount($ mil)':sum})])
+        ts_notional=pd.concat([ts_notional,df.resample("MS", 
+                how={'Currency':min,'Nation':min,'PrincipalAmount($ mil)':sum})])
     
     col=['IssueDate','Currency','Nation','PrincipalAmount($ mil)']
     ts_notional=pd.DataFrame(ts_notional).reset_index()[col]
@@ -458,7 +459,6 @@ def generate_notional_time_series(SSA_df,corporate_df):
         whole_ts_notional_by_nation_corp[ccy]=add_nation_dummy(ccy,ts_notional_corp)
     return whole_ts_notional_by_nation_SSA,whole_ts_notional_by_nation_corp
 
-
 def add_value(target_df, data_df,  group_col, typ, dropbox_path):
     '''
     Help function for regression_data
@@ -478,10 +478,6 @@ def add_value(target_df, data_df,  group_col, typ, dropbox_path):
             df_ls.append(sub_df.join(credit_df['5Y']))
     return pd.concat(df_ls)
     
-    
-    
-
-
 def regression_data(Currency, reg_df, dropbox_path):
     '''
     Assemble data for regression for each , columns: notional amount, butterfly rate, curve rate, interest level
@@ -528,7 +524,6 @@ def get_reg_dict(Currency_ls, na_dict, dropbox_path):
         
     return reg_dict
     
- 
 def weighted_average(data,weight):
     weight=weight/np.nansum(weight)
     return np.nansum(data.multiply(weight))
@@ -570,7 +565,6 @@ def agg_data(data):
     del aggregated_data['Nation']
     aggregated_data.set_index('Date',inplace=True)
     return aggregated_data
-
 
 def regression_data2(dict_reg_corp, dict_reg_ssa, Currency_ls, dropbox_path):
     '''

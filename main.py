@@ -55,11 +55,11 @@ def Compare_Country_Cols(df, df_euro_list):
 
     return (df_cb_curr_nat, df_cb_mkt_nat)
 
-def Filter_CB_and_SSA(df_cb_curr_nat, df_cb_dom_nat, outfile_nation):
+def Filter_CB_and_SSA(df_cb_curr_nat, df_cb_dom_nat, outfile_nation, path):
 
     #### Nation
     df_nation = dc.Flag_vs_Grouping(df, df_cb_curr_nat, df_cb_dom_nat, 
-                                 df_euro_list, outfile_nation)
+                                 df_euro_list, outfile_nation, path)
 
     ## For some reason filters wouldn't pick up the us issue. Added this conditional.
     df_nation = df_nation.drop((df_nation['Nation']=='us') & \
@@ -77,7 +77,50 @@ def Filter_CB_and_SSA(df_cb_curr_nat, df_cb_dom_nat, outfile_nation):
     df_nation_corp['Nation'] = [nat if nat not in currency_dict.keys() else currency_dict[nat] for nat in df_nation_corp['Nation'] ]
     df_nation_ssa['Nation'] =  [nat if nat not in currency_dict.keys() else currency_dict[nat] for nat in df_nation_ssa['Nation'] ]   
 
-    return df_nation_corp, df_nation_ssa
+    return df_nation, df_nation_corp, df_nation_ssa
+
+def Add_Curr_Spreads(df_reg_wgt, df_reg_usd, path):
+    curr_df_dict = {}
+    #curr_abbr = ['AUD', 'CAD', 'CHF', 'CNY', 'EUR', 'GBP', 'JPY', 'NOK', 'NZD', 'SEK']
+    curr_abbr = ['AUD', 'CAD', 'CHF', 'CNY', 'EUR', 'GBP', 'JPY', 'NOK', 'NZD', 'SEK']
+    curr_dict = {'AUD':'australia', 'CAD':'canada', 'CHF':'switzerland', 'CNY':'china', 
+                'EUR':'euro', 'JPY':'japanese', 'SEK':'sweden', 'GBP':'uk', 'NZD':'new zealand',
+                'NOK':'norway'}
+    curr_names = ['australia', 'canada', 'euro', 'japanese', 'sweden', 'uk']
+    for curr in curr_abbr:
+        curr_df_dict[curr_dict[curr]] = pd.read_csv(path + curr + \
+                                        ' Basis Swaps Curve monthly.csv', index_col='Date')
+
+    df_reg_wgt.set_index('Date', inplace=True)
+    df_reg_usd.set_index('Date', inplace=True)
+
+    wgt_spread_arr = []
+    usd_spread_arr = []
+
+    for index, row in df_reg_wgt.iterrows():
+        try:
+            if row['Currency']=='us':
+                wgt_spread_arr.append(0)
+            else:
+                wgt_spread_arr.append(curr_df_dict[row['Currency']].ix[index]['5Y'])
+        except:
+            wgt_spread_arr.append(np.nan)
+            print ('df_reg_wgt problem dates:', row['Currency'], index)
+
+    df_reg_wgt['Spread'] = wgt_spread_arr
+
+    print('\n')
+    for index, row in df_reg_usd.iterrows():
+        try:
+            if row['Currency']=='us':
+                usd_spread_arr.append(0)
+            else:
+                usd_spread_arr.append(curr_df_dict[row['Currency']].ix[index]['5Y'])
+        except:
+            usd_spread_arr.append(np.nan)
+            print ('df_reg_usd problem dates:', row['Currency'], index)
+
+    return df_reg_wgt, df_reg_usd
 
 if __name__ == '__main__':
     
@@ -88,6 +131,7 @@ if __name__ == '__main__':
 
     path = r'C:\Users\Alex\Desktop\\br_cb_Data\\'   # modify to own path for running
     data_path = r'C:\Users\Alex\Desktop\\br_cb\Data\\'  # modify to own path for running
+    dropbox_path = r'C:\Users\Alex\Dropbox\\blackrock project团队文件夹\\'
 
     ### Specify file names of dictionaries to be used 
     #filename_data = 'Filtered with Nations 2007-2016.csv'  # has average ratings
@@ -106,28 +150,31 @@ if __name__ == '__main__':
             Read_Data(path, data_path, filename_data, filename_domicile, filename_euro_list, 
               filename_curr_codes, filename_ratings, rating_cols_df, rating_cols_dict)
 
+    '''
     # Parsing columns
-    #df = Clean_And_Parse_Data(df, df_domicile, df_euro_list, df_curr_codes, df_ratings_dict)
+    df = Clean_And_Parse_Data(df, df_domicile, df_euro_list, df_curr_codes, df_ratings_dict)
 
-    #df.to_csv(path + '2007-2016 data with ratings.csv')
+    df.to_csv(path + '2007-2016 data with ratings.csv')
 
-    df = pd.read_csv(path + '2007-2016 data with ratings.csv')
+    #df = pd.read_csv(path + '2007-2016 data with ratings sample.csv')
 
     # Comparing country, mktplace, and currencies
-    df_cb_curr_nat, df_cb_dom_nat = \
+    df_cb_curr_nat, df_cb_mkt_nat = \
         Compare_Country_Cols(df, df_euro_list)
 
     # separating cross-border by ssa and corporate
-    df_nation_corp, df_nation_ssa = \
-        Filter_CB_and_SSA(df_cb_curr_nat, df_cb_dom_nat, outfile_nation)
+    df_nation, df_nation_corp, df_nation_ssa = \
+        Filter_CB_and_SSA(df_cb_curr_nat, df_cb_mkt_nat, outfile_nation, path)
     
-    sys.exit()
+    #sys.exit()
+    '''
 
     #to accelarate the data generating process, could use All cross-border & foreign flagged v_9 nation.csv directly    
-    '''
-    df = pd.read_csv(path + 'All cross-border & foreign flagged v_9 nation.csv')
-    df.Currency = [str.lower(cur) for cur in df.Currency]
-    df.Nation = [str.lower(na) for na in df.Nation]
+    df = pd.read_csv(path + 'All cross-border & foreign flagged v_10 nation.csv', 
+                    converters={'Exch-ange-ableCode':str,'Exchange-able Type':str})
+
+    df.Currency = [str(cur).lower() for cur in df.Currency]
+    df.Nation = [str(na).lower() for na in df.Nation]
     df_nation_ssa = df[df['IssueType'] == 'AS']
     df_nation_ssa.index = np.arange(len(df_nation_ssa.Issue_month))
     corporate_ls = ['IG',  'EMIG', 'FC', 'HY', 'EM']
@@ -142,9 +189,7 @@ if __name__ == '__main__':
                      'u.s.': 'us'}
 
     df_nation_corp['Nation'] = [nat if nat not in currency_dict.keys() else currency_dict[nat] for nat in df_nation_corp['Nation'] ]
-    df_nation_ssa['Nation'] =  [nat if nat not in currency_dict.keys() else currency_dict[nat] for nat in df_nation_ssa['Nation'] ]   
-    '''
-        
+    df_nation_ssa['Nation'] =  [nat if nat not in currency_dict.keys() else currency_dict[nat] for nat in df_nation_ssa['Nation'] ] 
     
     #get the notional amont series for 7 issue market 
     dic_notional_corp, dic_notional_SSA = dc.generate_notional_time_series(df_nation_corp, df_nation_ssa)
@@ -158,11 +203,10 @@ if __name__ == '__main__':
     #combine SSA and corp data and calculate spread (interest spread, butterfly spread, curve spread)
     df_reg_wgt, df_reg_usd = dc.regression_data2(dict_reg_corp, dict_reg_ssa, Currency_ls, dropbox_path)
     
+    df_reg_wgt, df_reg_usd = Add_Curr_Spreads(df_reg_wgt, df_reg_usd, path)
+
     df_reg_wgt.to_csv('regression_data_combined.csv')
     df_reg_usd.to_csv('regression_data_combined_proxy.csv')
-   
-    
-    
     
     
     
