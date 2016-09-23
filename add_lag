@@ -1,0 +1,76 @@
+import pandas as pd
+import numpy as np
+from pandas.stats.api import ols
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+from statsmodels.stats.outliers_influence import variance_inflation_factor as vif
+
+ROOT_DIR = 'C:/Users/Philippe/Documents/blackrock project/'
+
+MARKET_DICT = {'AUD': 'Australia TS SSA.csv' , \
+			'CAD': 'Canada TS SSA.csv', \
+			'EUR': 'EURO TS SSA.csv',\
+			'GBP': 'UK TS SSA.csv', \
+			'JPY': 'Japanese TS SSA.csv',\
+			'SEK': 'Sweden TS SSA.csv',\
+			'USD': 'US TS SSA.csv'}
+
+CREDIT_DICT = {  'AUD': 'AUD Australia Corporate A+, A, A- Spread Curve monthly.csv' , \
+			'CAD': 'CAD Canada Corporate A+, A, A- Spread Curve monthly.csv', \
+			'EUR': 'EUR Europe Corporate A+, A, A- Spread Curve monthly.csv',\
+			'JPY': 'JPY Japan Corporate A+, A, A- Spread Curve monthly.csv',\
+			'SEK': 'SEK Europe Corporate AA+ , AA , AA- Spread Curve monthly.csv',\
+			'USD': 'USD US Corporate A+, A, A- Spread Curve monthly.csv', \
+                 'NOK': 'NOK Europe Agency & Regionals Spread Curve monthly.csv',\
+                 'NZD': 'NZD New Zealand Financials AA+ , AA , AA- Spread Curve monthly.csv',\
+                 'GBP': 'GBP Europe Composite AA+ , AA , AA- Spread Curve monthly.csv'}
+   
+NATION_CURRENCY_DICT = {'Australia': 'AUD', \
+                        'UK': 'GBP', \
+                        'Sweden': 'SEK',  \
+                        'Canada': 'CAD', \
+                        'Norway': 'NOK', \
+                        'Japanese': 'JPY', \
+                        'EURO': 'EUR', \
+                        'US': 'USD', \
+                        'New Zealand': 'NZD'}
+
+def add_lag():
+    '''
+    Add 1 month and 2 months lags of the explanatory variables
+    
+    '''
+    
+    reg_df=pd.read_csv(ROOT_DIR+'regression_data_combined_proxy.csv');
+    reg_df['Date']=pd.to_datetime(reg_df['Date']);
+
+    n=len(reg_df)
+    reg_df['r_diff_1m_lag']=pd.Series(np.zeros(n),index=reg_df.index)
+    reg_df['Curve_diff_1m_lag']=pd.Series(np.zeros(n),index=reg_df.index)
+    reg_df['Butterfly_diff_1m_lag']=pd.Series(np.zeros(n),index=reg_df.index)
+    reg_df['Credit_diff_1m_lag']=pd.Series(np.zeros(n),index=reg_df.index)
+    reg_df['r_diff_2m_lag']=pd.Series(np.zeros(n),index=reg_df.index)
+    reg_df['Curve_diff_2m_lag']=pd.Series(np.zeros(n),index=reg_df.index)
+    reg_df['Butterfly_diff_2m_lag']=pd.Series(np.zeros(n),index=reg_df.index)
+    reg_df['Credit_diff_2m_lag']=pd.Series(np.zeros(n),index=reg_df.index)
+
+
+    for i in range(n):
+        print(i*1.0/n)
+        date_obs=reg_df['Date'].iloc[i]
+        curcy=reg_df['Currency'].iloc[i]
+        isCorp=reg_df['isCorp'].iloc[i]
+
+        if (reg_df[(reg_df['Date']==date_obs+relativedelta(months=-1))&(reg_df['isCorp']==isCorp)&(reg_df['Currency']==curcy)].empty==False):
+
+            reg_df['r_diff_1m_lag'].iloc[i]=reg_df['r_diff'][(reg_df['Date']==date_obs+relativedelta(months=-1))&(reg_df['isCorp']==isCorp)&(reg_df['Currency']==curcy)].iloc[0]
+            reg_df['Curve_diff_1m_lag'].iloc[i]=reg_df['Curve_diff'][(reg_df['Date']==date_obs+relativedelta(months=-1))&(reg_df['isCorp']==isCorp)&(reg_df['Currency']==curcy)].iloc[0]
+            reg_df['Butterfly_diff_1m_lag'].iloc[i]=reg_df['Butterfly_diff'][(reg_df['Date']==date_obs+relativedelta(months=-1))&(reg_df['isCorp']==isCorp)&(reg_df['Currency']==curcy)].iloc[0]
+            reg_df['Credit_diff_1m_lag'].iloc[i]=reg_df['Credit_diff'][(reg_df['Date']==date_obs+relativedelta(months=-1))&(reg_df['isCorp']==isCorp)&(reg_df['Currency']==curcy)].iloc[0]
+
+        if (reg_df[(reg_df['Date']==date_obs+relativedelta(months=-2))&(reg_df['isCorp']==isCorp)&(reg_df['Currency']==curcy)].empty==False):
+
+            reg_df['r_diff_2m_lag'].iloc[i]=reg_df['r_diff'][(reg_df['Date']==date_obs+relativedelta(months=-2))&(reg_df['isCorp']==isCorp)&(reg_df['Currency']==curcy)].iloc[0]
+            reg_df['Curve_diff_2m_lag'].iloc[i]=reg_df['Curve_diff'][(reg_df['Date']==date_obs+relativedelta(months=-2))&(reg_df['isCorp']==isCorp)&(reg_df['Currency']==curcy)].iloc[0]
+            reg_df['Butterfly_diff_2m_lag'].iloc[i]=reg_df['Butterfly_diff'][(reg_df['Date']==date_obs+relativedelta(months=-2))&(reg_df['isCorp']==isCorp)&(reg_df['Currency']==curcy)].iloc[0]
+            reg_df['Credit_diff_2m_lag'].iloc[i]=reg_df['Credit_diff'][(reg_df['Date']==date_obs+relativedelta(months=-2))&(reg_df['isCorp']==isCorp)&(reg_df['Currency']==curcy)].iloc[0]
